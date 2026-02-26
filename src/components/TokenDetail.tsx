@@ -15,135 +15,149 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
   const truncAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      right: 0,
-      bottom: 0,
-      width: '420px',
-      background: 'rgba(10, 10, 15, 0.92)',
-      backdropFilter: 'blur(20px)',
-      borderLeft: '1px solid rgba(255,255,255,0.08)',
-      overflowY: 'auto',
-      zIndex: 100,
-      padding: '24px',
-      fontFamily: 'inherit',
-      color: '#fff',
-    }}>
-      <button
-        onClick={onClose}
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(10, 10, 15, 0.85)',
+        backdropFilter: 'blur(20px)',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          background: 'none',
-          border: '1px solid rgba(255,255,255,0.2)',
-          color: '#fff',
-          padding: '6px 12px',
+          maxWidth: '520px',
+          width: '90vw',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          padding: '32px',
           fontFamily: 'inherit',
-          fontWeight: 'bold',
-          fontSize: '12px',
-          textTransform: 'uppercase',
-          cursor: 'crosshair',
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(10, 10, 15, 0.95)',
+          position: 'relative',
         }}
       >
-        CLOSE
-      </button>
-
-      <div style={{ marginTop: '48px', marginBottom: '20px' }}>
-        <MediaRenderer token={token} />
-      </div>
-
-      <h2 style={{
-        fontSize: '16px',
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-        margin: '0 0 16px',
-        letterSpacing: '0.05em',
-      }}>
-        {token.name}
-      </h2>
-
-      <div style={{ fontSize: '12px', lineHeight: '2', fontFamily: 'monospace' }}>
-        {token.collectionName && (
-          <div><span style={{ color: '#666' }}>COLLECTION:</span> {token.collectionName}</div>
-        )}
-        {token.creator && (
-          <div><span style={{ color: '#666' }}>CREATOR:</span> {truncAddr(token.creator)}</div>
-        )}
-        <div>
-          <span style={{ color: '#666' }}>CHAIN:</span>{' '}
-          <span style={{ color: chain.color }}>{chain.name.toUpperCase()}</span>
-        </div>
-        <div><span style={{ color: '#666' }}>STANDARD:</span> {token.standard}</div>
-        {token.tokenId && (
-          <div><span style={{ color: '#666' }}>TOKEN ID:</span> {token.tokenId}</div>
-        )}
-      </div>
-
-      {token.description && (
-        <p style={{
-          fontSize: '12px',
-          color: '#999',
-          lineHeight: '1.6',
-          marginTop: '16px',
-          fontFamily: 'inherit',
-        }}>
-          {token.description}
-        </p>
-      )}
-
-      {token.attributes && token.attributes.length > 0 && (
-        <div style={{ marginTop: '20px' }}>
-          <div style={{
-            fontSize: '11px',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            color: '#666',
-            marginBottom: '8px',
-            letterSpacing: '0.1em',
-          }}>
-            ATTRIBUTES
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {token.attributes.map((attr, i) => (
-              <div
-                key={i}
-                style={{
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  padding: '6px 10px',
-                  fontSize: '10px',
-                  fontFamily: 'inherit',
-                  textTransform: 'uppercase',
-                }}
-              >
-                <div style={{ color: '#666' }}>{attr.trait_type}</div>
-                <div style={{ color: '#fff', marginTop: '2px' }}>{attr.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
-        <a
-          href={explorerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={onClose}
           style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: 'none',
             border: '1px solid rgba(255,255,255,0.2)',
             color: '#fff',
-            padding: '8px 14px',
-            fontSize: '11px',
-            fontWeight: 'bold',
+            padding: '6px 12px',
             fontFamily: 'inherit',
+            fontWeight: 'bold',
+            fontSize: '12px',
             textTransform: 'uppercase',
-            textDecoration: 'none',
-            letterSpacing: '0.05em',
+            cursor: 'crosshair',
           }}
         >
-          VIEW ON EXPLORER
-        </a>
+          CLOSE
+        </button>
+
+        <div style={{ marginBottom: '20px' }}>
+          <MediaRenderer token={token} />
+        </div>
+
+        <h2 style={{
+          fontSize: '16px',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          margin: '0 0 16px',
+          letterSpacing: '0.05em',
+        }}>
+          {token.name}
+        </h2>
+
+        <div style={{ fontSize: '12px', lineHeight: '2', fontFamily: 'monospace' }}>
+          {token.collectionName && (
+            <div><span style={{ color: '#666' }}>COLLECTION:</span> {token.collectionName}</div>
+          )}
+          {token.creator && (
+            <div><span style={{ color: '#666' }}>CREATOR:</span> {truncAddr(token.creator)}</div>
+          )}
+          <div>
+            <span style={{ color: '#666' }}>CHAIN:</span>{' '}
+            <span style={{ color: chain.color }}>{chain.name.toUpperCase()}</span>
+          </div>
+          <div><span style={{ color: '#666' }}>STANDARD:</span> {token.standard}</div>
+          {token.tokenId && (
+            <div><span style={{ color: '#666' }}>TOKEN ID:</span> {token.tokenId}</div>
+          )}
+        </div>
+
+        {token.description && (
+          <p style={{
+            fontSize: '12px',
+            color: '#999',
+            lineHeight: '1.6',
+            marginTop: '16px',
+            fontFamily: 'inherit',
+          }}>
+            {token.description}
+          </p>
+        )}
+
+        {token.attributes && token.attributes.length > 0 && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{
+              fontSize: '11px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              color: '#666',
+              marginBottom: '8px',
+              letterSpacing: '0.1em',
+            }}>
+              ATTRIBUTES
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {token.attributes.map((attr, i) => (
+                <div
+                  key={i}
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    padding: '6px 10px',
+                    fontSize: '10px',
+                    fontFamily: 'inherit',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  <div style={{ color: '#666' }}>{attr.trait_type}</div>
+                  <div style={{ color: '#fff', marginTop: '2px' }}>{attr.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              padding: '8px 14px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              fontFamily: 'inherit',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              letterSpacing: '0.05em',
+            }}
+          >
+            VIEW ON EXPLORER
+          </a>
+        </div>
       </div>
     </div>
   );

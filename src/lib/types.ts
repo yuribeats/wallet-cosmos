@@ -32,13 +32,20 @@ export interface WalletConnection {
   tokenTypes: string[];
 }
 
+export interface SenderInfo {
+  address: string;
+  ensName?: string;
+  transferCount: number;
+  contractAddresses: string[];
+}
+
 export type FilterState = {
-  chains: string[];
   standards: string[];
   mediaTypes: string[];
   sortBy: 'date' | 'creator' | 'mediaType' | 'tokenType' | 'chain' | 'grid';
   sortDirection: 'asc' | 'desc';
   searchQuery: string;
   selectedCreator?: string;
+  selectedSender?: string;
   density: number;
 };

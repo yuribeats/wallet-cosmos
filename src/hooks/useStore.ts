@@ -1,8 +1,8 @@
 'use client';
 
 import { create } from 'zustand';
-import type { UnifiedToken, WalletConnection, FilterState } from '@/lib/types';
-import { CHAIN_KEYS } from '@/lib/constants';
+import type { UnifiedToken, WalletConnection, FilterState, SenderInfo } from '@/lib/types';
+import type { ChainKey } from '@/lib/constants';
 
 interface WalletStore {
   tokens: UnifiedToken[];
@@ -16,6 +16,9 @@ interface WalletStore {
   evmAddress: string;
   walletLoaded: boolean;
 
+  activeChain: ChainKey;
+  senders: SenderInfo[];
+
   setTokens: (tokens: UnifiedToken[]) => void;
   appendTokens: (tokens: UnifiedToken[]) => void;
   setConnections: (connections: WalletConnection[]) => void;
@@ -25,6 +28,8 @@ interface WalletStore {
   setLoadProgress: (progress: number) => void;
   setError: (error: string | null) => void;
   loadWallet: (evm: string) => void;
+  setActiveChain: (chain: ChainKey) => void;
+  setSenders: (senders: SenderInfo[]) => void;
   getFilteredTokens: () => UnifiedToken[];
 }
 
@@ -32,9 +37,8 @@ export const useStore = create<WalletStore>((set, get) => ({
   tokens: [],
   connections: [],
   filters: {
-    chains: [...CHAIN_KEYS],
     standards: ['ERC721', 'ERC1155'],
-    mediaTypes: ['image', 'video', 'audio', 'text', 'html', 'unknown'],
+    mediaTypes: ['image', 'audio'],
     sortBy: 'chain',
     sortDirection: 'desc',
     searchQuery: '',
@@ -48,6 +52,9 @@ export const useStore = create<WalletStore>((set, get) => ({
   evmAddress: '',
   walletLoaded: false,
 
+  activeChain: 'ethereum',
+  senders: [],
+
   setTokens: (tokens) => set({ tokens }),
   appendTokens: (tokens) => set((s) => ({ tokens: [...s.tokens, ...tokens] })),
   setConnections: (connections) => set({ connections }),
@@ -58,18 +65,37 @@ export const useStore = create<WalletStore>((set, get) => ({
   setLoadProgress: (progress) => set({ loadProgress: progress }),
   setError: (error) => set({ error }),
   loadWallet: (evm) =>
-    set({ evmAddress: evm, walletLoaded: true, tokens: [], connections: [], error: null, selectedToken: null, loadProgress: 0 }),
+    set({ evmAddress: evm, walletLoaded: true, tokens: [], connections: [], senders: [], error: null, selectedToken: null, loadProgress: 0, filters: { ...get().filters, selectedSender: undefined } }),
+
+  setActiveChain: (chain) =>
+    set((s) => ({
+      activeChain: chain,
+      tokens: [],
+      senders: [],
+      loadProgress: 0,
+      selectedToken: null,
+      filters: { ...s.filters, selectedSender: undefined },
+    })),
+
+  setSenders: (senders) => set({ senders }),
 
   getFilteredTokens: () => {
-    const { tokens, filters } = get();
+    const { tokens, filters, senders } = get();
     let filtered = tokens;
 
-    filtered = filtered.filter((t) => filters.chains.includes(t.chain));
     filtered = filtered.filter((t) => filters.standards.includes(t.standard));
     filtered = filtered.filter((t) => filters.mediaTypes.includes(t.media.mediaType));
 
     if (filters.selectedCreator) {
       filtered = filtered.filter((t) => t.creator === filters.selectedCreator);
+    }
+
+    if (filters.selectedSender) {
+      const sender = senders.find((s) => s.address === filters.selectedSender);
+      if (sender) {
+        const contracts = new Set(sender.contractAddresses.map((a) => a.toLowerCase()));
+        filtered = filtered.filter((t) => contracts.has(t.contractAddress.toLowerCase()));
+      }
     }
 
     if (filters.searchQuery) {

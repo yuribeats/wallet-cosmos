@@ -31,7 +31,8 @@ export default function Home() {
   const filters = useStore((s) => s.filters);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
 
-  const filteredTokens = useMemo(() => getFilteredTokens(), [tokens, filters, getFilteredTokens]);
+  const senders = useStore((s) => s.senders);
+  const filteredTokens = useMemo(() => getFilteredTokens(), [tokens, filters, senders, getFilteredTokens]);
 
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [SceneComponent, setSceneComponent] = useState<React.ComponentType | null>(null);

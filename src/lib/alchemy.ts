@@ -1,7 +1,7 @@
 import { Alchemy, Network, NftFilters } from 'alchemy-sdk';
 import { DEFAULT_WALLET, CHAIN_KEYS, type ChainKey } from './constants';
 import { resolveMedia } from './mediaUtils';
-import type { UnifiedToken, WalletConnection } from './types';
+import type { UnifiedToken, WalletConnection, SenderInfo } from './types';
 
 function getClient(chain: ChainKey): Alchemy {
   const networkMap: Record<ChainKey, Network> = {
@@ -149,4 +149,65 @@ export async function fetchTransfers(wallet?: string, chainFilter?: ChainKey): P
     chains: Array.from(data.chains),
     tokenTypes: Array.from(data.types),
   }));
+}
+
+export async function fetchSenders(wallet: string, chain: ChainKey): Promise<SenderInfo[]> {
+  const client = getClient(chain);
+  const senderMap = new Map<string, { count: number; contracts: Set<string> }>();
+
+  let pageKey: string | undefined;
+  do {
+    try {
+      const response = await client.core.getAssetTransfers({
+        toAddress: wallet,
+        category: ['erc721' as never, 'erc1155' as never],
+        maxCount: 1000,
+        pageKey,
+      });
+
+      for (const tx of response.transfers) {
+        const sender = tx.from?.toLowerCase();
+        if (!sender || sender === wallet.toLowerCase()) continue;
+
+        const existing = senderMap.get(sender) || { count: 0, contracts: new Set() };
+        existing.count++;
+        const contract = (tx.rawContract?.address || '').toLowerCase();
+        if (contract) existing.contracts.add(contract);
+        senderMap.set(sender, existing);
+      }
+
+      pageKey = response.pageKey;
+    } catch {
+      break;
+    }
+  } while (pageKey);
+
+  return Array.from(senderMap.entries())
+    .map(([address, data]) => ({
+      address,
+      transferCount: data.count,
+      contractAddresses: Array.from(data.contracts),
+    }))
+    .sort((a, b) => b.transferCount - a.transferCount);
+}
+
+export async function resolveEnsNames(addresses: string[]): Promise<Map<string, string>> {
+  const ethClient = getClient('ethereum');
+  const results = new Map<string, string>();
+
+  const batch = addresses.slice(0, 50);
+  const lookups = await Promise.allSettled(
+    batch.map(async (addr) => {
+      const name = await ethClient.core.lookupAddress(addr);
+      return { addr, name };
+    })
+  );
+
+  for (const result of lookups) {
+    if (result.status === 'fulfilled' && result.value.name) {
+      results.set(result.value.addr, result.value.name);
+    }
+  }
+
+  return results;
 }

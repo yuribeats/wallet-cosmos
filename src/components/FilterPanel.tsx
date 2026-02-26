@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
+import type { ChainKey } from '@/lib/constants';
 
 const STANDARDS = ['ERC721', 'ERC1155'];
-const MEDIA_TYPES = ['image', 'video', 'audio', 'text', 'html'];
+const MEDIA_TYPES = ['image', 'audio'];
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'chain', label: 'CHAIN' },
   { value: 'grid', label: 'GRID' },
@@ -54,12 +55,141 @@ function ToggleButton({ active, label, color, onClick }: {
   );
 }
 
+function truncateAddr(addr: string) {
+  if (!addr) return '';
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
+function SenderDropdown() {
+  const senders = useStore((s) => s.senders);
+  const filters = useStore((s) => s.filters);
+  const setFilter = useStore((s) => s.setFilter);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const selected = filters.selectedSender
+    ? senders.find((s) => s.address === filters.selectedSender)
+    : null;
+
+  const displayLabel = selected
+    ? (selected.ensName || truncateAddr(selected.address))
+    : 'ALL SENDERS';
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: '100%',
+          background: 'transparent',
+          border: '1px solid rgba(255,255,255,0.1)',
+          color: '#fff',
+          padding: '6px 8px',
+          fontSize: '11px',
+          fontFamily: 'inherit',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          textAlign: 'left',
+          cursor: 'crosshair',
+          boxSizing: 'border-box',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {displayLabel}
+        </span>
+        <span style={{ color: '#555', fontSize: '8px', marginLeft: '8px' }}>
+          {open ? '\u25B2' : '\u25BC'}
+        </span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          background: 'rgba(10, 10, 15, 0.95)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderTop: 'none',
+          maxHeight: '200px',
+          overflowY: 'auto',
+          zIndex: 100,
+        }}>
+          <button
+            onClick={() => { setFilter('selectedSender', undefined); setOpen(false); }}
+            style={{
+              width: '100%',
+              background: !filters.selectedSender ? 'rgba(255,255,255,0.08)' : 'transparent',
+              border: 'none',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              color: '#fff',
+              padding: '6px 8px',
+              fontSize: '10px',
+              fontFamily: 'inherit',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              textAlign: 'left',
+              cursor: 'crosshair',
+            }}
+          >
+            ALL SENDERS
+          </button>
+          {senders.map((sender) => (
+            <button
+              key={sender.address}
+              onClick={() => { setFilter('selectedSender', sender.address); setOpen(false); }}
+              style={{
+                width: '100%',
+                background: filters.selectedSender === sender.address ? 'rgba(255,255,255,0.08)' : 'transparent',
+                border: 'none',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                color: '#fff',
+                padding: '6px 8px',
+                fontSize: '10px',
+                fontFamily: 'inherit',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                textAlign: 'left',
+                cursor: 'crosshair',
+                display: 'flex',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {sender.ensName || truncateAddr(sender.address)}
+              </span>
+              <span style={{ color: '#555', marginLeft: '8px', flexShrink: 0 }}>
+                {sender.transferCount}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FilterPanel() {
   const filters = useStore((s) => s.filters);
   const setFilter = useStore((s) => s.setFilter);
+  const activeChain = useStore((s) => s.activeChain);
+  const setActiveChain = useStore((s) => s.setActiveChain);
   const [collapsed, setCollapsed] = useState(false);
 
-  function toggleArrayFilter(key: 'chains' | 'standards' | 'mediaTypes', value: string) {
+  function toggleArrayFilter(key: 'standards' | 'mediaTypes', value: string) {
     const current = filters[key];
     const next = current.includes(value)
       ? current.filter((v) => v !== value)
@@ -182,13 +312,18 @@ export default function FilterPanel() {
           {CHAIN_KEYS.map((chain) => (
             <ToggleButton
               key={chain}
-              active={filters.chains.includes(chain)}
+              active={activeChain === chain}
               label={CHAINS[chain].name}
-              color={filters.chains.includes(chain) ? CHAINS[chain].color + '40' : undefined}
-              onClick={() => toggleArrayFilter('chains', chain)}
+              color={activeChain === chain ? CHAINS[chain].color + '40' : undefined}
+              onClick={() => setActiveChain(chain as ChainKey)}
             />
           ))}
         </div>
+      </div>
+
+      <div style={{ marginBottom: '12px' }}>
+        <span style={labelStyle}>SENDER</span>
+        <SenderDropdown />
       </div>
 
       <div style={{ marginBottom: '12px' }}>

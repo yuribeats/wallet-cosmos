@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useStore } from '@/hooks/useStore';
-import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
+import { CHAINS } from '@/lib/constants';
 
 function truncate(addr: string) {
   if (!addr) return '';
@@ -13,14 +13,13 @@ export default function HUD() {
   const tokens = useStore((s) => s.tokens);
   const isLoading = useStore((s) => s.isLoading);
   const evmAddress = useStore((s) => s.evmAddress);
+  const activeChain = useStore((s) => s.activeChain);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
   const filters = useStore((s) => s.filters);
-  const filteredCount = useMemo(() => getFilteredTokens().length, [tokens, filters, getFilteredTokens]);
+  const senders = useStore((s) => s.senders);
+  const filteredCount = useMemo(() => getFilteredTokens().length, [tokens, filters, senders, getFilteredTokens]);
 
-  const chainCounts: Record<string, number> = {};
-  for (const chain of CHAIN_KEYS) {
-    chainCounts[chain] = tokens.filter((t) => t.chain === chain).length;
-  }
+  const chain = CHAINS[activeChain];
 
   return (
     <div style={{
@@ -52,8 +51,6 @@ export default function HUD() {
       </div>
 
       <div style={{
-        display: 'flex',
-        gap: '12px',
         background: 'rgba(10, 10, 15, 0.75)',
         backdropFilter: 'blur(8px)',
         border: '1px solid rgba(255,255,255,0.06)',
@@ -63,11 +60,9 @@ export default function HUD() {
         textTransform: 'uppercase',
         letterSpacing: '0.08em',
       }}>
-        {CHAIN_KEYS.map((chain) => (
-          <span key={chain} style={{ color: CHAINS[chain].color }}>
-            {CHAINS[chain].name}: {chainCounts[chain] || 0}
-          </span>
-        ))}
+        <span style={{ color: chain.color }}>
+          {chain.name}: {tokens.length}
+        </span>
       </div>
     </div>
   );
