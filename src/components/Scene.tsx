@@ -102,7 +102,8 @@ export default function Scene() {
     let prevTokens: UnifiedToken[] = [];
     let prevFilters = useStore.getState().filters;
     const loaded = new Set<string>();
-    let loadCancel = false;
+    let loadGen = 0;
+    let loadTimer: ReturnType<typeof setTimeout> | null = null;
 
     function rebuild() {
       const state = useStore.getState();
@@ -113,8 +114,9 @@ export default function Scene() {
       const count = positioned.length;
       const buf = mesh.instanceMatrix.array as Float32Array;
 
-      loadCancel = true;
-      setTimeout(() => { loadCancel = false; startImageLoads(positioned, count); }, 0);
+      const gen = ++loadGen;
+      if (loadTimer) clearTimeout(loadTimer);
+      loadTimer = setTimeout(() => { startImageLoads(positioned, count, gen); }, 0);
 
       for (let i = 0; i < count; i++) {
         const token = positioned[i];
@@ -158,12 +160,13 @@ export default function Scene() {
 
     // Concurrent image loader — 50 at a time, no delays
     // On CORS failure, retries through server proxy
-    function startImageLoads(tokens: UnifiedToken[], count: number) {
+    // Uses generation counter to discard stale loads
+    function startImageLoads(tokens: UnifiedToken[], count: number, gen: number) {
       let nextIdx = 0;
       let active = 0;
 
       function drawTile(img: HTMLImageElement, i: number) {
-        if (loadCancel) return;
+        if (gen !== loadGen) return;
         const c = i % TPR;
         const r = Math.floor(i / TPR);
         ctx.drawImage(img, c * TILE, r * TILE, TILE, TILE);
@@ -173,7 +176,7 @@ export default function Scene() {
       function done(id: string) {
         loaded.add(id);
         active--;
-        loadNext();
+        if (gen === loadGen) loadNext();
       }
 
       function loadOne(i: number, url: string, id: string, proxied: boolean) {
@@ -182,18 +185,18 @@ export default function Scene() {
         img.crossOrigin = 'anonymous';
         img.onload = () => { drawTile(img, i); done(id); };
         img.onerror = () => {
-          if (!proxied) {
+          if (!proxied && gen === loadGen) {
             active--;
             loadOne(i, '/api/image?url=' + encodeURIComponent(url), id, true);
           } else {
             done(id);
           }
         };
-        img.src = proxied ? url : url;
+        img.src = url;
       }
 
       function loadNext() {
-        while (active < 50 && nextIdx < count) {
+        while (active < 50 && nextIdx < count && gen === loadGen) {
           const i = nextIdx++;
           const token = tokens[i];
           if (loaded.has(token.id)) continue;
@@ -291,7 +294,7 @@ export default function Scene() {
     animate();
 
     return () => {
-      loadCancel = true;
+      loadGen = -1;
       cancelAnimationFrame(raf);
       unsub();
       window.removeEventListener('resize', onResize);
