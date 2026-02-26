@@ -78,6 +78,7 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string): Promis
         attributes: metadata?.attributes as Array<{ trait_type: string; value: string }> | undefined,
         rawMetadata: metadata,
         lastUpdated: nft.timeLastUpdated as string | undefined,
+        acquiredAt: ((nft as Record<string, unknown>).acquiredAt as { blockTimestamp?: string } | undefined)?.blockTimestamp || undefined,
       });
     }
 

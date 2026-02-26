@@ -21,6 +21,7 @@ export interface UnifiedToken {
   attributes?: Array<{ trait_type: string; value: string }>;
   rawMetadata?: Record<string, unknown>;
   lastUpdated?: string;
+  acquiredAt?: string;
 
   position?: [number, number, number];
 }

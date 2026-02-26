@@ -95,12 +95,14 @@ function sizeAwareSpacing(density: number, thumbnailSize: number): number {
   return baseScale * (1.05 + density * 0.5);
 }
 
+function getAcquiredTime(t: UnifiedToken): number {
+  if (t.acquiredAt) return new Date(t.acquiredAt).getTime();
+  if (t.lastUpdated) return new Date(t.lastUpdated).getTime();
+  return 0;
+}
+
 function layoutNewest(tokens: UnifiedToken[], density: number, count: number = 100, thumbnailSize: number = 1.0): UnifiedToken[] {
-  const sorted = [...tokens].sort((a, b) => {
-    const da = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
-    const db = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
-    return db - da;
-  });
+  const sorted = [...tokens].sort((a, b) => getAcquiredTime(b) - getAcquiredTime(a));
 
   const newest = sorted.slice(0, count);
   const spacing = sizeAwareSpacing(density, thumbnailSize);
@@ -200,11 +202,7 @@ function layoutByMediaType(tokens: UnifiedToken[], density: number): UnifiedToke
 }
 
 function layoutByDate(tokens: UnifiedToken[], density: number): UnifiedToken[] {
-  const sorted = [...tokens].sort((a, b) => {
-    const da = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
-    const db = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
-    return db - da;
-  });
+  const sorted = [...tokens].sort((a, b) => getAcquiredTime(b) - getAcquiredTime(a));
 
   const rStep = 0.05 + density * 0.2;
   const zStep = 0.3 + density * 1.0;
