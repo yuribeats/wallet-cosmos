@@ -1,7 +1,7 @@
 import type { UnifiedToken, FilterState } from './types';
 import { CHAIN_KEYS, type ChainKey } from './constants';
 
-const BASE_SPREAD = 40;
+const BASE_SPREAD = 15;
 
 function sphericalToCartesian(
   radius: number,
@@ -106,7 +106,7 @@ function layoutByChain(tokens: UnifiedToken[], density: number): UnifiedToken[] 
   for (const chain of CHAIN_KEYS) {
     const group = grouped.get(chain) || [];
     if (group.length === 0) continue;
-    const radius = Math.max(3, Math.cbrt(group.length) * 2.5) * (0.5 + density * 0.5);
+    const radius = Math.max(2, Math.cbrt(group.length) * 1.8) * (0.5 + density * 0.5);
     const offset: [number, number, number] = [
       CHAIN_OFFSETS[chain][0] * spreadScale,
       CHAIN_OFFSETS[chain][1] * spreadScale,
@@ -167,7 +167,7 @@ function layoutByMediaType(tokens: UnifiedToken[], density: number): UnifiedToke
   const result: UnifiedToken[] = [];
   for (const [type, group] of grouped) {
     const bandY = (bands[type] ?? 5) * -bandGap + bandGap * 2.5;
-    const radius = Math.max(3, Math.cbrt(group.length) * 2.5) * (0.5 + density * 0.5);
+    const radius = Math.max(2, Math.cbrt(group.length) * 1.8) * (0.5 + density * 0.5);
     const positions = goldenSpiralPositions(group.length, radius, [0, bandY, 0]);
     for (let i = 0; i < group.length; i++) {
       result.push({ ...group[i], position: positions[i] });
@@ -215,7 +215,7 @@ function layoutByTokenType(tokens: UnifiedToken[], density: number): UnifiedToke
   const result: UnifiedToken[] = [];
   for (const [standard, group] of grouped) {
     const offset = typeOffsets[standard] || [0, 0, 0];
-    const radius = Math.max(3, Math.cbrt(group.length) * 2.5) * (0.5 + density * 0.5);
+    const radius = Math.max(2, Math.cbrt(group.length) * 1.8) * (0.5 + density * 0.5);
     const positions = goldenSpiralPositions(group.length, radius, offset);
     for (let i = 0; i < group.length; i++) {
       result.push({ ...group[i], position: positions[i] });
