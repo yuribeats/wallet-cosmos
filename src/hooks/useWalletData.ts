@@ -4,7 +4,12 @@ import { useEffect } from 'react';
 import { useStore } from './useStore';
 
 export function useWalletData() {
-  const { walletAddress, walletLoaded, setTokens, setConnections, setLoading, setError } = useStore();
+  const walletAddress = useStore((s) => s.walletAddress);
+  const walletLoaded = useStore((s) => s.walletLoaded);
+  const setTokens = useStore((s) => s.setTokens);
+  const setConnections = useStore((s) => s.setConnections);
+  const setLoading = useStore((s) => s.setLoading);
+  const setError = useStore((s) => s.setError);
 
   useEffect(() => {
     if (!walletLoaded || !walletAddress) return;

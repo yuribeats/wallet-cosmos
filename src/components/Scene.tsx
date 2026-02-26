@@ -2,14 +2,18 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
+import { useMemo } from 'react';
 import { useStore } from '@/hooks/useStore';
 import TokenCloud from './TokenCloud';
 import ConnectionLines from './ConnectionLines';
 
 export default function Scene() {
-  const filteredTokens = useStore((s) => s.getFilteredTokens());
+  const tokens = useStore((s) => s.tokens);
+  const filters = useStore((s) => s.filters);
   const connections = useStore((s) => s.connections);
   const setSelectedToken = useStore((s) => s.setSelectedToken);
+  const getFilteredTokens = useStore((s) => s.getFilteredTokens);
+  const filteredTokens = useMemo(() => getFilteredTokens(), [tokens, filters, getFilteredTokens]);
 
   return (
     <Canvas

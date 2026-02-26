@@ -13,7 +13,11 @@ const Scene = dynamic(() => import('@/components/Scene'), { ssr: false });
 export default function Home() {
   useWalletData();
 
-  const { walletLoaded, selectedToken, setSelectedToken, isLoading, error } = useStore();
+  const walletLoaded = useStore((s) => s.walletLoaded);
+  const selectedToken = useStore((s) => s.selectedToken);
+  const setSelectedToken = useStore((s) => s.setSelectedToken);
+  const isLoading = useStore((s) => s.isLoading);
+  const error = useStore((s) => s.error);
 
   if (!walletLoaded) {
     return <WalletInput />;

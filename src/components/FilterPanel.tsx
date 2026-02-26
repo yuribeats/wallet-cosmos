@@ -71,7 +71,8 @@ function ToggleButton({ active, label, color, onClick }: {
 }
 
 export default function FilterPanel() {
-  const { filters, setFilter } = useStore();
+  const filters = useStore((s) => s.filters);
+  const setFilter = useStore((s) => s.setFilter);
 
   function toggleArrayFilter(key: 'chains' | 'standards' | 'mediaTypes', value: string) {
     const current = filters[key];

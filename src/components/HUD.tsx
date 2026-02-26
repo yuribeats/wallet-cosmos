@@ -4,7 +4,9 @@ import { useStore } from '@/hooks/useStore';
 import { CHAINS, CHAIN_KEYS, type ChainKey } from '@/lib/constants';
 
 export default function HUD() {
-  const { tokens, isLoading, walletAddress } = useStore();
+  const tokens = useStore((s) => s.tokens);
+  const isLoading = useStore((s) => s.isLoading);
+  const walletAddress = useStore((s) => s.walletAddress);
   const filteredCount = useStore((s) => s.getFilteredTokens().length);
   const truncAddr = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '';
 
