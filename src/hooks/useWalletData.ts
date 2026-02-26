@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useStore } from './useStore';
 import { CHAIN_KEYS } from '@/lib/constants';
 
@@ -16,8 +16,16 @@ export function useWalletData() {
   const setLoadProgress = useStore((s) => s.setLoadProgress);
   const setError = useStore((s) => s.setError);
 
+  const allChainsLoaded = useRef(false);
+  const singleChainLoaded = useRef<string | null>(null);
+
   useEffect(() => {
     if (!walletLoaded || !evmAddress) return;
+
+    const needAllChains = sortBy === 'newest';
+
+    if (needAllChains && allChainsLoaded.current) return;
+    if (!needAllChains && singleChainLoaded.current === activeChain) return;
 
     let cancelled = false;
 
@@ -26,7 +34,9 @@ export function useWalletData() {
       setError(null);
       setLoadProgress(0);
 
-      if (sortBy === 'newest') {
+      if (needAllChains) {
+        allChainsLoaded.current = false;
+        singleChainLoaded.current = null;
         let completed = 0;
         let first = true;
 
@@ -54,7 +64,9 @@ export function useWalletData() {
         );
 
         await Promise.all(fetches);
+        if (!cancelled) allChainsLoaded.current = true;
       } else {
+        allChainsLoaded.current = false;
         try {
           const res = await fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, chain: activeChain })}`);
           if (cancelled) return;
@@ -63,6 +75,7 @@ export function useWalletData() {
           if (!cancelled) {
             setTokens(data.tokens || []);
             setLoadProgress(1);
+            singleChainLoaded.current = activeChain;
           }
         } catch (err) {
           if (!cancelled) {
@@ -75,15 +88,6 @@ export function useWalletData() {
         setLoading(false);
         setLoadProgress(1);
       }
-
-      if (cancelled) return;
-
-      fetch(`/api/transfers?${new URLSearchParams({ wallet: evmAddress })}`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (!cancelled && d.connections) setConnections(d.connections);
-        })
-        .catch(() => {});
     }
 
     load();
