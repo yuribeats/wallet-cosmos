@@ -96,8 +96,8 @@ function layoutNewest(tokens: UnifiedToken[], density: number): UnifiedToken[] {
   });
 
   const newest = sorted.slice(0, 100);
-  const radius = Math.max(3, Math.cbrt(newest.length) * 1.8) * (0.5 + density * 0.5);
-  const positions = goldenSpiralPositions(newest.length, radius);
+  const spacing = 0.6 + density * 2.4;
+  const positions = gridPositions(newest.length, spacing);
   return newest.map((t, i) => ({ ...t, position: positions[i] }));
 }
 
