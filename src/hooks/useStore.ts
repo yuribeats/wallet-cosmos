@@ -40,7 +40,7 @@ export const useStore = create<WalletStore>((set, get) => ({
     sortBy: 'grid',
     sortDirection: 'desc',
     searchQuery: '',
-    density: 0.05,
+    density: 0.4,
   },
   selectedToken: null,
   isLoading: false,
