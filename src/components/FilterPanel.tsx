@@ -8,6 +8,7 @@ import type { ChainKey } from '@/lib/constants';
 const STANDARDS = ['ERC721', 'ERC1155'];
 const MEDIA_TYPES = ['image', 'video'];
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'newest', label: 'NEWEST 100' },
   { value: 'chain', label: 'SPHERE' },
   { value: 'grid', label: 'GRID' },
   { value: 'creator', label: 'CREATOR' },

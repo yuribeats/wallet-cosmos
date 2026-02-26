@@ -64,6 +64,8 @@ export function computePositions(
   if (tokens.length === 0) return [];
 
   switch (sortBy) {
+    case 'newest':
+      return layoutNewest(tokens, density);
     case 'chain':
       return layoutByChain(tokens, density);
     case 'creator':
@@ -77,13 +79,26 @@ export function computePositions(
     case 'grid':
       return layoutGrid(tokens, density);
     default:
-      return layoutByChain(tokens, density);
+      return layoutNewest(tokens, density);
   }
 }
 
 function applyDensity(positions: [number, number, number][], density: number): [number, number, number][] {
   const scale = 0.3 + density * 1.7;
   return positions.map(([x, y, z]) => [x * scale, y * scale, z * scale]);
+}
+
+function layoutNewest(tokens: UnifiedToken[], density: number): UnifiedToken[] {
+  const sorted = [...tokens].sort((a, b) => {
+    const da = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
+    const db = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
+    return db - da;
+  });
+
+  const newest = sorted.slice(0, 100);
+  const radius = Math.max(3, Math.cbrt(newest.length) * 1.8) * (0.5 + density * 0.5);
+  const positions = goldenSpiralPositions(newest.length, radius);
+  return newest.map((t, i) => ({ ...t, position: positions[i] }));
 }
 
 function layoutGrid(tokens: UnifiedToken[], density: number): UnifiedToken[] {
