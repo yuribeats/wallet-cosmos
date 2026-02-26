@@ -79,6 +79,7 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
         rawMetadata: metadata,
         lastUpdated: nft.timeLastUpdated as string | undefined,
         acquiredAt: ((nft as Record<string, unknown>).acquiredAt as { blockTimestamp?: string } | undefined)?.blockTimestamp || undefined,
+        mintedAt: ((nft as Record<string, unknown>).mint as { timestamp?: string } | undefined)?.timestamp || undefined,
       });
     }
 

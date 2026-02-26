@@ -22,6 +22,7 @@ export interface UnifiedToken {
   rawMetadata?: Record<string, unknown>;
   lastUpdated?: string;
   acquiredAt?: string;
+  mintedAt?: string;
 
   position?: [number, number, number];
 }
