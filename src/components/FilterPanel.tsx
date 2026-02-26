@@ -205,12 +205,12 @@ export default function FilterPanel() {
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', marginRight: '4px', marginBottom: '4px' }}>
             <button
-              onClick={() => setFilter('sortBy', filters.sortBy === 'newest' ? 'grid' : 'newest')}
+              onClick={() => setFilter('useNewest', !filters.useNewest)}
               style={{
-                background: filters.sortBy === 'newest' ? 'rgba(255,255,255,0.15)' : 'transparent',
-                border: `1px solid ${filters.sortBy === 'newest' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                background: filters.useNewest ? 'rgba(255,255,255,0.15)' : 'transparent',
+                border: `1px solid ${filters.useNewest ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
                 borderRight: 'none',
-                color: filters.sortBy === 'newest' ? '#fff' : '#555',
+                color: filters.useNewest ? '#fff' : '#555',
                 padding: '6px 10px',
                 fontSize: '10px',
                 fontWeight: 'bold',
@@ -230,13 +230,13 @@ export default function FilterPanel() {
               onChange={(e) => {
                 const v = parseInt(e.target.value) || 100;
                 setFilter('newestCount', Math.max(1, v));
-                if (filters.sortBy !== 'newest') setFilter('sortBy', 'newest');
+                if (!filters.useNewest) setFilter('useNewest', true);
               }}
               style={{
                 width: '48px',
-                background: filters.sortBy === 'newest' ? 'rgba(255,255,255,0.15)' : 'transparent',
-                border: `1px solid ${filters.sortBy === 'newest' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                color: filters.sortBy === 'newest' ? '#fff' : '#555',
+                background: filters.useNewest ? 'rgba(255,255,255,0.15)' : 'transparent',
+                border: `1px solid ${filters.useNewest ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                color: filters.useNewest ? '#fff' : '#555',
                 padding: '6px',
                 fontSize: '10px',
                 fontWeight: 'bold',
@@ -295,9 +295,9 @@ export default function FilterPanel() {
           {SORT_OPTIONS.map((opt) => (
             <ToggleButton
               key={opt.value}
-              active={opt.value === 'grid' ? (filters.sortBy === 'grid' || filters.sortBy === 'newest') : filters.sortBy === opt.value}
+              active={filters.layout === opt.value}
               label={opt.label}
-              onClick={() => setFilter('sortBy', opt.value as typeof filters.sortBy)}
+              onClick={() => setFilter('layout', opt.value as typeof filters.layout)}
             />
           ))}
         </div>

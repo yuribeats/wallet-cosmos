@@ -37,7 +37,8 @@ export const useStore = create<WalletStore>((set, get) => ({
   filters: {
     standards: ['ERC1155'],
     mediaTypes: ['image', 'video'],
-    sortBy: 'newest',
+    layout: 'grid',
+    useNewest: true,
     sortDirection: 'desc',
     searchQuery: '',
     density: 0.4,

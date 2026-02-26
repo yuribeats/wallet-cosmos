@@ -8,7 +8,7 @@ export function useWalletData() {
   const evmAddress = useStore((s) => s.evmAddress);
   const walletLoaded = useStore((s) => s.walletLoaded);
   const activeChain = useStore((s) => s.activeChain);
-  const sortBy = useStore((s) => s.filters.sortBy);
+  const useNewest = useStore((s) => s.filters.useNewest);
   const setTokens = useStore((s) => s.setTokens);
   const appendTokens = useStore((s) => s.appendTokens);
   const setConnections = useStore((s) => s.setConnections);
@@ -22,7 +22,7 @@ export function useWalletData() {
   useEffect(() => {
     if (!walletLoaded || !evmAddress) return;
 
-    const needNewest = sortBy === 'newest';
+    const needNewest = useNewest;
 
     if (needNewest && newestLoaded.current === activeChain) return;
     if (!needNewest && singleChainLoaded.current === activeChain) return;
@@ -80,5 +80,5 @@ export function useWalletData() {
 
     load();
     return () => { cancelled = true; };
-  }, [evmAddress, walletLoaded, activeChain, sortBy, setTokens, appendTokens, setConnections, setLoading, setLoadProgress, setError]);
+  }, [evmAddress, walletLoaded, activeChain, useNewest, setTokens, appendTokens, setConnections, setLoading, setLoadProgress, setError]);
 }

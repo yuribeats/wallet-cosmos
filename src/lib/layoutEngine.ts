@@ -58,31 +58,35 @@ const CHAIN_OFFSETS: Record<ChainKey, [number, number, number]> = {
 
 export function computePositions(
   tokens: UnifiedToken[],
-  sortBy: FilterState['sortBy'],
+  layout: FilterState['layout'],
   density: number = 1.0,
+  useNewest: boolean = false,
   newestCount: number = 100,
   thumbnailSize: number = 1.0,
   gridCols: number = 0
 ): UnifiedToken[] {
   if (tokens.length === 0) return [];
 
-  switch (sortBy) {
-    case 'newest':
-      return layoutNewest(tokens, density, newestCount, thumbnailSize, gridCols);
+  let workingTokens = tokens;
+  if (useNewest) {
+    const sorted = [...tokens].sort((a, b) => getMintTime(b) - getMintTime(a));
+    workingTokens = sorted.slice(0, newestCount);
+  }
+
+  switch (layout) {
     case 'chain':
-      return layoutByChain(tokens, density);
+      return layoutByChain(workingTokens, density);
     case 'creator':
-      return layoutByCreator(tokens, density);
+      return layoutByCreator(workingTokens, density);
     case 'mediaType':
-      return layoutByMediaType(tokens, density);
+      return layoutByMediaType(workingTokens, density);
     case 'date':
-      return layoutByDate(tokens, density);
+      return layoutByDate(workingTokens, density);
     case 'tokenType':
-      return layoutByTokenType(tokens, density);
+      return layoutByTokenType(workingTokens, density);
     case 'grid':
-      return layoutGrid(tokens, density, thumbnailSize, gridCols);
     default:
-      return layoutNewest(tokens, density, newestCount, thumbnailSize, gridCols);
+      return layoutGrid(workingTokens, density, thumbnailSize, gridCols);
   }
 }
 
@@ -100,15 +104,6 @@ function getMintTime(t: UnifiedToken): number {
   if (t.mintedAt) return new Date(t.mintedAt).getTime();
   if (t.acquiredAt) return new Date(t.acquiredAt).getTime();
   return 0;
-}
-
-function layoutNewest(tokens: UnifiedToken[], density: number, count: number = 100, thumbnailSize: number = 1.0, gridCols: number = 0): UnifiedToken[] {
-  const sorted = [...tokens].sort((a, b) => getMintTime(b) - getMintTime(a));
-
-  const newest = sorted.slice(0, count);
-  const spacing = sizeAwareSpacing(density, thumbnailSize);
-  const positions = gridPositions(newest.length, spacing, gridCols);
-  return newest.map((t, i) => ({ ...t, position: positions[i] }));
 }
 
 function layoutGrid(tokens: UnifiedToken[], density: number, thumbnailSize: number = 1.0, gridCols: number = 0): UnifiedToken[] {

@@ -12,15 +12,16 @@ interface TokenCloudProps {
 }
 
 export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
-  const sortBy = useStore((s) => s.filters.sortBy);
+  const layout = useStore((s) => s.filters.layout);
+  const useNewest = useStore((s) => s.filters.useNewest);
   const density = useStore((s) => s.filters.density);
   const newestCount = useStore((s) => s.filters.newestCount);
   const thumbnailSize = useStore((s) => s.filters.thumbnailSize);
   const gridCols = useStore((s) => s.filters.gridCols);
 
   const positionedTokens = useMemo(
-    () => computePositions(tokens, sortBy, density, newestCount, thumbnailSize, gridCols),
-    [tokens, sortBy, density, newestCount, thumbnailSize, gridCols]
+    () => computePositions(tokens, layout, density, useNewest, newestCount, thumbnailSize, gridCols),
+    [tokens, layout, density, useNewest, newestCount, thumbnailSize, gridCols]
   );
 
   return (
