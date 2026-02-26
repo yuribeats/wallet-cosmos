@@ -13,7 +13,6 @@ export default function HUD() {
   const tokens = useStore((s) => s.tokens);
   const isLoading = useStore((s) => s.isLoading);
   const evmAddress = useStore((s) => s.evmAddress);
-  const solanaAddress = useStore((s) => s.solanaAddress);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
   const filters = useStore((s) => s.filters);
   const filteredCount = useMemo(() => getFilteredTokens().length, [tokens, filters, getFilteredTokens]);
@@ -48,8 +47,6 @@ export default function HUD() {
         letterSpacing: '0.08em',
       }}>
         {evmAddress && <span style={{ color: '#666' }}>{truncate(evmAddress)}</span>}
-        {evmAddress && solanaAddress && <span style={{ margin: '0 8px', color: '#333' }}>+</span>}
-        {solanaAddress && <span style={{ color: '#9945FF' }}>{truncate(solanaAddress)}</span>}
         <span style={{ margin: '0 12px', color: '#333' }}>|</span>
         <span>{isLoading ? 'LOADING...' : `${filteredCount} / ${tokens.length} TOKENS`}</span>
       </div>

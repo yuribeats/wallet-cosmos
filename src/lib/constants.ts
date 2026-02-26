@@ -29,31 +29,17 @@ export const CHAINS = {
     alchemyNetwork: 'ZORA_MAINNET',
     explorer: 'https://explorer.zora.energy',
   },
-  solana: {
-    name: 'Solana',
-    network: 'solana-mainnet',
-    color: '#9945FF',
-    alchemyNetwork: 'SOLANA_MAINNET',
-    explorer: 'https://solscan.io',
-  },
 } as const;
 
 export type ChainKey = keyof typeof CHAINS;
 
 export const CHAIN_KEYS = Object.keys(CHAINS) as ChainKey[];
 
-export const EVM_CHAIN_KEYS = CHAIN_KEYS.filter((k) => k !== 'solana') as ChainKey[];
-
 export const TOKEN_STANDARDS = {
   ERC721: 'ERC721',
   ERC1155: 'ERC1155',
-  ERC20: 'ERC20',
 } as const;
 
 export function isEvmAddress(addr: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(addr);
-}
-
-export function isSolanaAddress(addr: string): boolean {
-  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
 }

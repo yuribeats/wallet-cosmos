@@ -1,6 +1,6 @@
 export interface UnifiedToken {
   id: string;
-  chain: 'ethereum' | 'base' | 'optimism' | 'zora' | 'solana';
+  chain: 'ethereum' | 'base' | 'optimism' | 'zora';
   contractAddress: string;
   tokenId?: string;
   standard: 'ERC721' | 'ERC1155';

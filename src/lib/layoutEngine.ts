@@ -54,7 +54,6 @@ const CHAIN_OFFSETS: Record<ChainKey, [number, number, number]> = {
   base: [BASE_SPREAD * 0.6, BASE_SPREAD * 0.4, 0],
   optimism: [-BASE_SPREAD * 0.6, -BASE_SPREAD * 0.4, 0],
   zora: [BASE_SPREAD * 0.6, -BASE_SPREAD * 0.4, 0],
-  solana: [0, 0, -BASE_SPREAD * 0.6],
 };
 
 export function computePositions(
