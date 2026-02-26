@@ -15,10 +15,11 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
   const sortBy = useStore((s) => s.filters.sortBy);
   const density = useStore((s) => s.filters.density);
   const newestCount = useStore((s) => s.filters.newestCount);
+  const thumbnailSize = useStore((s) => s.filters.thumbnailSize);
 
   const positionedTokens = useMemo(
-    () => computePositions(tokens, sortBy, density, newestCount),
-    [tokens, sortBy, density, newestCount]
+    () => computePositions(tokens, sortBy, density, newestCount, thumbnailSize),
+    [tokens, sortBy, density, newestCount, thumbnailSize]
   );
 
   return (

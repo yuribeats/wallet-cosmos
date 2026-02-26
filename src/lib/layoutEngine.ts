@@ -60,13 +60,14 @@ export function computePositions(
   tokens: UnifiedToken[],
   sortBy: FilterState['sortBy'],
   density: number = 1.0,
-  newestCount: number = 100
+  newestCount: number = 100,
+  thumbnailSize: number = 1.0
 ): UnifiedToken[] {
   if (tokens.length === 0) return [];
 
   switch (sortBy) {
     case 'newest':
-      return layoutNewest(tokens, density, newestCount);
+      return layoutNewest(tokens, density, newestCount, thumbnailSize);
     case 'chain':
       return layoutByChain(tokens, density);
     case 'creator':
@@ -78,9 +79,9 @@ export function computePositions(
     case 'tokenType':
       return layoutByTokenType(tokens, density);
     case 'grid':
-      return layoutGrid(tokens, density);
+      return layoutGrid(tokens, density, thumbnailSize);
     default:
-      return layoutNewest(tokens, density, newestCount);
+      return layoutNewest(tokens, density, newestCount, thumbnailSize);
   }
 }
 
@@ -89,7 +90,12 @@ function applyDensity(positions: [number, number, number][], density: number): [
   return positions.map(([x, y, z]) => [x * scale, y * scale, z * scale]);
 }
 
-function layoutNewest(tokens: UnifiedToken[], density: number, count: number = 100): UnifiedToken[] {
+function sizeAwareSpacing(density: number, thumbnailSize: number): number {
+  const baseScale = 0.4 + thumbnailSize * 29.6;
+  return baseScale * (1.05 + density * 0.5);
+}
+
+function layoutNewest(tokens: UnifiedToken[], density: number, count: number = 100, thumbnailSize: number = 1.0): UnifiedToken[] {
   const sorted = [...tokens].sort((a, b) => {
     const da = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
     const db = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
@@ -97,13 +103,13 @@ function layoutNewest(tokens: UnifiedToken[], density: number, count: number = 1
   });
 
   const newest = sorted.slice(0, count);
-  const spacing = 0.6 + density * 2.4;
+  const spacing = sizeAwareSpacing(density, thumbnailSize);
   const positions = gridPositions(newest.length, spacing);
   return newest.map((t, i) => ({ ...t, position: positions[i] }));
 }
 
-function layoutGrid(tokens: UnifiedToken[], density: number): UnifiedToken[] {
-  const spacing = 0.6 + density * 2.4;
+function layoutGrid(tokens: UnifiedToken[], density: number, thumbnailSize: number = 1.0): UnifiedToken[] {
+  const spacing = sizeAwareSpacing(density, thumbnailSize);
   const positions = gridPositions(tokens.length, spacing);
   return tokens.map((t, i) => ({ ...t, position: positions[i] }));
 }
