@@ -76,6 +76,7 @@ export const useStore = create<WalletStore>((set, get) => ({
     const { tokens, filters } = get();
     let filtered = tokens;
 
+    filtered = filtered.filter((t) => t.media.thumbnail || t.media.image);
     filtered = filtered.filter((t) => filters.standards.includes(t.standard));
     filtered = filtered.filter((t) => filters.mediaTypes.includes(t.media.mediaType));
 
