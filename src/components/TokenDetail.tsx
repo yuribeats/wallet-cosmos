@@ -27,7 +27,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
       overflowY: 'auto',
       zIndex: 100,
       padding: '24px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: 'inherit',
       color: '#fff',
     }}>
       <button
@@ -40,7 +40,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
           border: '1px solid rgba(255,255,255,0.2)',
           color: '#fff',
           padding: '6px 12px',
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: 'inherit',
           fontWeight: 'bold',
           fontSize: '12px',
           textTransform: 'uppercase',
@@ -93,7 +93,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
           color: '#999',
           lineHeight: '1.6',
           marginTop: '16px',
-          fontFamily: 'monospace',
+          fontFamily: 'inherit',
         }}>
           {token.description}
         </p>
@@ -119,7 +119,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
                   border: '1px solid rgba(255,255,255,0.1)',
                   padding: '6px 10px',
                   fontSize: '10px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'inherit',
                   textTransform: 'uppercase',
                 }}
               >
@@ -142,7 +142,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
             padding: '8px 14px',
             fontSize: '11px',
             fontWeight: 'bold',
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'inherit',
             textTransform: 'uppercase',
             textDecoration: 'none',
             letterSpacing: '0.05em',

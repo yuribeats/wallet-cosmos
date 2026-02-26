@@ -23,7 +23,7 @@ export default function HUD() {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-end',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: 'inherit',
       color: '#fff',
       pointerEvents: 'none',
     }}>

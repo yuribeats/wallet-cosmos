@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GeistPixelSquare } from "geist/font/pixel";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={GeistPixelSquare.variable}>
       <body style={{ margin: 0, padding: 0, overflow: 'hidden', background: '#0a0a0f' }}>
         {children}
       </body>

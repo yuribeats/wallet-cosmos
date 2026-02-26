@@ -108,7 +108,7 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
             background: 'rgba(0,0,0,0.85)',
             color: '#fff',
             padding: '4px 10px',
-            fontFamily: 'monospace',
+            fontFamily: 'inherit',
             fontSize: '11px',
             textTransform: 'uppercase',
             fontWeight: 'bold',

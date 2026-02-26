@@ -78,7 +78,7 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
       alignItems: 'center',
       justifyContent: 'center',
       background: '#111',
-      fontFamily: 'monospace',
+      fontFamily: 'inherit',
       fontSize: '14px',
       color: '#666',
       textTransform: 'uppercase',
