@@ -49,7 +49,7 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
 
     meshRef.current.quaternion.copy(camera.quaternion);
 
-    const baseScale = 0.4 + thumbnailSize * 1.2;
+    const baseScale = 0.4 + thumbnailSize * 29.6;
     const targetScale = hovered ? baseScale * 1.05 : baseScale;
     meshRef.current.scale.lerp(
       new THREE.Vector3(targetScale, targetScale, targetScale),
