@@ -4,23 +4,47 @@ import { useState } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { DEFAULT_WALLET, isEvmAddress, isSolanaAddress } from '@/lib/constants';
 
+const inputStyle: React.CSSProperties = {
+  width: '520px',
+  maxWidth: '90vw',
+  background: 'transparent',
+  border: '1px solid rgba(255,255,255,0.15)',
+  color: '#fff',
+  padding: '12px 16px',
+  fontSize: '13px',
+  fontFamily: 'inherit',
+  fontWeight: 'bold',
+  textTransform: 'none',
+  outline: 'none',
+  letterSpacing: '0.02em',
+  boxSizing: 'border-box' as const,
+};
+
 export default function WalletInput() {
-  const [value, setValue] = useState(DEFAULT_WALLET);
+  const [evmValue, setEvmValue] = useState(DEFAULT_WALLET);
+  const [solValue, setSolValue] = useState('');
   const [error, setError] = useState('');
-  const loadWallet = useStore((s) => s.loadWallet);
+  const loadWallets = useStore((s) => s.loadWallets);
 
   function handleLoad() {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setError('ENTER A WALLET ADDRESS');
+    const evm = evmValue.trim();
+    const sol = solValue.trim();
+
+    if (!evm && !sol) {
+      setError('ENTER AT LEAST ONE WALLET ADDRESS');
       return;
     }
-    if (!isEvmAddress(trimmed) && !isSolanaAddress(trimmed)) {
-      setError('INVALID ADDRESS - USE EVM (0X...) OR SOLANA');
+    if (evm && !isEvmAddress(evm)) {
+      setError('INVALID EVM ADDRESS');
       return;
     }
+    if (sol && !isSolanaAddress(sol)) {
+      setError('INVALID SOLANA ADDRESS');
+      return;
+    }
+
     setError('');
-    loadWallet(trimmed);
+    loadWallets(evm, sol);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -40,39 +64,51 @@ export default function WalletInput() {
       gap: '16px',
       fontFamily: 'inherit',
     }}>
-      <div style={{
-        fontSize: '11px',
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-        letterSpacing: '0.2em',
-        color: '#666',
-        marginBottom: '4px',
-      }}>
-        WALLET ADDRESS
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+        <div style={{
+          fontSize: '10px',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          letterSpacing: '0.15em',
+          color: '#666',
+          alignSelf: 'flex-start',
+          marginLeft: '2px',
+        }}>
+          EVM ADDRESS
+        </div>
+        <input
+          type="text"
+          value={evmValue}
+          onChange={(e) => setEvmValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          spellCheck={false}
+          placeholder="0X..."
+          style={inputStyle}
+        />
       </div>
 
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        spellCheck={false}
-        style={{
-          width: '520px',
-          maxWidth: '90vw',
-          background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.15)',
-          color: '#fff',
-          padding: '12px 16px',
-          fontSize: '13px',
-          fontFamily: 'inherit',
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+        <div style={{
+          fontSize: '10px',
           fontWeight: 'bold',
-          textTransform: 'none',
-          outline: 'none',
-          letterSpacing: '0.02em',
-          boxSizing: 'border-box',
-        }}
-      />
+          textTransform: 'uppercase',
+          letterSpacing: '0.15em',
+          color: '#666',
+          alignSelf: 'flex-start',
+          marginLeft: '2px',
+        }}>
+          SOLANA ADDRESS
+        </div>
+        <input
+          type="text"
+          value={solValue}
+          onChange={(e) => setSolValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          spellCheck={false}
+          placeholder="BASE58..."
+          style={inputStyle}
+        />
+      </div>
 
       {error && (
         <div style={{
@@ -99,21 +135,11 @@ export default function WalletInput() {
           textTransform: 'uppercase',
           letterSpacing: '0.15em',
           cursor: 'crosshair',
+          marginTop: '8px',
         }}
       >
         LOAD
       </button>
-
-      <div style={{
-        fontSize: '9px',
-        fontWeight: 'bold',
-        color: '#333',
-        textTransform: 'uppercase',
-        letterSpacing: '0.1em',
-        marginTop: '8px',
-      }}>
-        EVM (0X...) OR SOLANA (BASE58)
-      </div>
     </div>
   );
 }
