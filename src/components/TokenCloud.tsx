@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useMemo, useCallback } from 'react';
-import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { UnifiedToken } from '@/lib/types';
 import { computePositions } from '@/lib/layoutEngine';
@@ -13,112 +13,58 @@ interface TokenCloudProps {
   onSelect: (token: UnifiedToken) => void;
 }
 
-const MAX_INSTANCES = 5000;
-const dummy = new THREE.Object3D();
-const tmpColor = new THREE.Color();
+function TokenNode({ token, targetPosition, onSelect }: {
+  token: UnifiedToken;
+  targetPosition: [number, number, number];
+  onSelect: (token: UnifiedToken) => void;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const chainColor = CHAINS[token.chain as ChainKey]?.color || '#ffffff';
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+    const p = meshRef.current.position;
+    p.x += (targetPosition[0] - p.x) * 0.06;
+    p.y += (targetPosition[1] - p.y) * 0.06;
+    p.z += (targetPosition[2] - p.z) * 0.06;
+  });
+
+  return (
+    <mesh
+      ref={meshRef}
+      position={targetPosition}
+      onClick={(e) => { e.stopPropagation(); onSelect(token); }}
+    >
+      <planeGeometry args={[0.8, 0.8]} />
+      <meshBasicMaterial
+        color={chainColor}
+        side={THREE.DoubleSide}
+        transparent
+        opacity={0.85}
+      />
+    </mesh>
+  );
+}
 
 export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
   const sortBy = useStore((s) => s.filters.sortBy);
   const density = useStore((s) => s.filters.density);
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const currentPositions = useRef<Float32Array>(new Float32Array(MAX_INSTANCES * 3));
-  const prevCount = useRef(0);
 
   const positionedTokens = useMemo(
     () => computePositions(tokens, sortBy, density),
     [tokens, sortBy, density]
   );
 
-  const targetPositions = useMemo(() => {
-    const arr = new Float32Array(positionedTokens.length * 3);
-    for (let i = 0; i < positionedTokens.length; i++) {
-      const p = positionedTokens[i].position || [0, 0, 0];
-      arr[i * 3] = p[0];
-      arr[i * 3 + 1] = p[1];
-      arr[i * 3 + 2] = p[2];
-    }
-    return arr;
-  }, [positionedTokens]);
-
-  const chainColors = useMemo(() => {
-    const arr = new Float32Array(positionedTokens.length * 3);
-    for (let i = 0; i < positionedTokens.length; i++) {
-      const hex = CHAINS[positionedTokens[i].chain as ChainKey]?.color || '#ffffff';
-      tmpColor.set(hex);
-      arr[i * 3] = tmpColor.r;
-      arr[i * 3 + 1] = tmpColor.g;
-      arr[i * 3 + 2] = tmpColor.b;
-    }
-    return arr;
-  }, [positionedTokens]);
-
-  useFrame(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-
-    const count = positionedTokens.length;
-    mesh.count = count;
-
-    if (count === 0) return;
-
-    if (count !== prevCount.current) {
-      for (let i = prevCount.current * 3; i < count * 3; i++) {
-        currentPositions.current[i] = targetPositions[i] || 0;
-      }
-      prevCount.current = count;
-    }
-
-    const cur = currentPositions.current;
-    const t = Date.now() * 0.001;
-
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      cur[i3] += (targetPositions[i3] - cur[i3]) * 0.06;
-      cur[i3 + 1] += (targetPositions[i3 + 1] - cur[i3 + 1]) * 0.06;
-      cur[i3 + 2] += (targetPositions[i3 + 2] - cur[i3 + 2]) * 0.06;
-
-      const bob = Math.sin(t + cur[i3]) * 0.03;
-
-      dummy.position.set(cur[i3], cur[i3 + 1] + bob, cur[i3 + 2]);
-      dummy.scale.setScalar(0.8);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-
-      tmpColor.setRGB(chainColors[i3], chainColors[i3 + 1], chainColors[i3 + 2]);
-      mesh.setColorAt(i, tmpColor);
-    }
-
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  });
-
-  const { raycaster, camera, pointer } = useThree();
-
-  const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
-    if (!meshRef.current) return;
-    e.stopPropagation();
-    raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObject(meshRef.current);
-    if (hits.length > 0 && hits[0].instanceId !== undefined) {
-      const token = positionedTokens[hits[0].instanceId];
-      if (token) onSelect(token);
-    }
-  }, [positionedTokens, onSelect, raycaster, camera, pointer]);
-
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[undefined, undefined, MAX_INSTANCES]}
-      onClick={handleClick}
-      frustumCulled={false}
-    >
-      <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial
-        color="#ffffff"
-        side={THREE.DoubleSide}
-        transparent
-        opacity={0.85}
-      />
-    </instancedMesh>
+    <group>
+      {positionedTokens.map((token) => (
+        <TokenNode
+          key={token.id}
+          token={token}
+          targetPosition={token.position || [0, 0, 0]}
+          onSelect={onSelect}
+        />
+      ))}
+    </group>
   );
 }
