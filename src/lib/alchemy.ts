@@ -24,39 +24,43 @@ export async function fetchNftsForChain(chain: EvmChainKey, wallet: string): Pro
   let pageKey: string | undefined;
 
   do {
-    const response = await client.nft.getNftsForOwner(wallet, {
-      excludeFilters: [NftFilters.SPAM],
-      pageKey,
-      pageSize: 100,
-    });
-
-    for (const nft of response.ownedNfts) {
-      const media = resolveMedia(
-        nft.raw?.metadata as Record<string, unknown> | undefined,
-        nft.image
-      );
-
-      tokens.push({
-        id: `${chain}-${nft.contract.address}-${nft.tokenId}`,
-        chain,
-        contractAddress: nft.contract.address,
-        tokenId: nft.tokenId,
-        standard: nft.tokenType === 'ERC1155' ? 'ERC1155' : 'ERC721',
-        name: nft.name || nft.contract.name || `Token ${nft.tokenId}`,
-        description: nft.description || undefined,
-        creator: nft.contract.contractDeployer || undefined,
-        collectionName: nft.contract.name || undefined,
-        media,
-        balance: nft.balance,
-        attributes: (nft.raw?.metadata as Record<string, unknown>)?.attributes as
-          | Array<{ trait_type: string; value: string }>
-          | undefined,
-        rawMetadata: nft.raw?.metadata as Record<string, unknown> | undefined,
-        lastUpdated: nft.timeLastUpdated,
+    try {
+      const response = await client.nft.getNftsForOwner(wallet, {
+        excludeFilters: [NftFilters.SPAM],
+        pageKey,
+        pageSize: 100,
       });
-    }
 
-    pageKey = response.pageKey;
+      for (const nft of response.ownedNfts) {
+        const media = resolveMedia(
+          nft.raw?.metadata as Record<string, unknown> | undefined,
+          nft.image
+        );
+
+        tokens.push({
+          id: `${chain}-${nft.contract.address}-${nft.tokenId}`,
+          chain,
+          contractAddress: nft.contract.address,
+          tokenId: nft.tokenId,
+          standard: nft.tokenType === 'ERC1155' ? 'ERC1155' : 'ERC721',
+          name: nft.name || nft.contract.name || `Token ${nft.tokenId}`,
+          description: nft.description || undefined,
+          creator: nft.contract.contractDeployer || undefined,
+          collectionName: nft.contract.name || undefined,
+          media,
+          balance: nft.balance,
+          attributes: (nft.raw?.metadata as Record<string, unknown>)?.attributes as
+            | Array<{ trait_type: string; value: string }>
+            | undefined,
+          rawMetadata: nft.raw?.metadata as Record<string, unknown> | undefined,
+          lastUpdated: nft.timeLastUpdated,
+        });
+      }
+
+      pageKey = response.pageKey;
+    } catch {
+      break;
+    }
   } while (pageKey);
 
   return tokens;
