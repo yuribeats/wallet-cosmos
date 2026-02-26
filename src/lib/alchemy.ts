@@ -22,43 +22,51 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string): Promis
   let pageKey: string | undefined;
 
   do {
-    try {
-      const response = await client.nft.getNftsForOwner(wallet, {
-        excludeFilters: [NftFilters.SPAM],
-        pageKey,
-        pageSize: 100,
-      });
-
-      for (const nft of response.ownedNfts) {
-        const media = resolveMedia(
-          nft.raw?.metadata as Record<string, unknown> | undefined,
-          nft.image
-        );
-
-        tokens.push({
-          id: `${chain}-${nft.contract.address}-${nft.tokenId}`,
-          chain,
-          contractAddress: nft.contract.address,
-          tokenId: nft.tokenId,
-          standard: nft.tokenType === 'ERC1155' ? 'ERC1155' : 'ERC721',
-          name: nft.name || nft.contract.name || `Token ${nft.tokenId}`,
-          description: nft.description || undefined,
-          creator: nft.contract.contractDeployer || undefined,
-          collectionName: nft.contract.name || undefined,
-          media,
-          balance: nft.balance,
-          attributes: (nft.raw?.metadata as Record<string, unknown>)?.attributes as
-            | Array<{ trait_type: string; value: string }>
-            | undefined,
-          rawMetadata: nft.raw?.metadata as Record<string, unknown> | undefined,
-          lastUpdated: nft.timeLastUpdated,
+    let response;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await client.nft.getNftsForOwner(wallet, {
+          excludeFilters: [NftFilters.SPAM],
+          pageKey,
+          pageSize: 100,
         });
+        break;
+      } catch {
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        }
       }
-
-      pageKey = response.pageKey;
-    } catch {
-      break;
     }
+
+    if (!response) break;
+
+    for (const nft of response.ownedNfts) {
+      const media = resolveMedia(
+        nft.raw?.metadata as Record<string, unknown> | undefined,
+        nft.image
+      );
+
+      tokens.push({
+        id: `${chain}-${nft.contract.address}-${nft.tokenId}`,
+        chain,
+        contractAddress: nft.contract.address,
+        tokenId: nft.tokenId,
+        standard: nft.tokenType === 'ERC1155' ? 'ERC1155' : 'ERC721',
+        name: nft.name || nft.contract.name || `Token ${nft.tokenId}`,
+        description: nft.description || undefined,
+        creator: nft.contract.contractDeployer || undefined,
+        collectionName: nft.contract.name || undefined,
+        media,
+        balance: nft.balance,
+        attributes: (nft.raw?.metadata as Record<string, unknown>)?.attributes as
+          | Array<{ trait_type: string; value: string }>
+          | undefined,
+        rawMetadata: nft.raw?.metadata as Record<string, unknown> | undefined,
+        lastUpdated: nft.timeLastUpdated,
+      });
+    }
+
+    pageKey = response.pageKey;
   } while (pageKey);
 
   return tokens;
