@@ -16,10 +16,11 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
   const density = useStore((s) => s.filters.density);
   const newestCount = useStore((s) => s.filters.newestCount);
   const thumbnailSize = useStore((s) => s.filters.thumbnailSize);
+  const gridCols = useStore((s) => s.filters.gridCols);
 
   const positionedTokens = useMemo(
-    () => computePositions(tokens, sortBy, density, newestCount, thumbnailSize),
-    [tokens, sortBy, density, newestCount, thumbnailSize]
+    () => computePositions(tokens, sortBy, density, newestCount, thumbnailSize, gridCols),
+    [tokens, sortBy, density, newestCount, thumbnailSize, gridCols]
   );
 
   return (

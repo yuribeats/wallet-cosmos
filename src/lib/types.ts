@@ -43,4 +43,5 @@ export type FilterState = {
   density: number;
   newestCount: number;
   thumbnailSize: number;
+  gridCols: number;
 };

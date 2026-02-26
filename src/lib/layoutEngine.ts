@@ -30,8 +30,8 @@ function goldenSpiralPositions(count: number, radius: number, offset: [number, n
   return positions;
 }
 
-function gridPositions(count: number, spacing: number): [number, number, number][] {
-  const cols = Math.ceil(Math.sqrt(count));
+function gridPositions(count: number, spacing: number, forceCols: number = 0): [number, number, number][] {
+  const cols = forceCols > 0 ? forceCols : Math.ceil(Math.sqrt(count));
   const positions: [number, number, number][] = [];
   const totalW = (cols - 1) * spacing;
   const totalH = (Math.ceil(count / cols) - 1) * spacing;
@@ -61,13 +61,14 @@ export function computePositions(
   sortBy: FilterState['sortBy'],
   density: number = 1.0,
   newestCount: number = 100,
-  thumbnailSize: number = 1.0
+  thumbnailSize: number = 1.0,
+  gridCols: number = 0
 ): UnifiedToken[] {
   if (tokens.length === 0) return [];
 
   switch (sortBy) {
     case 'newest':
-      return layoutNewest(tokens, density, newestCount, thumbnailSize);
+      return layoutNewest(tokens, density, newestCount, thumbnailSize, gridCols);
     case 'chain':
       return layoutByChain(tokens, density);
     case 'creator':
@@ -79,9 +80,9 @@ export function computePositions(
     case 'tokenType':
       return layoutByTokenType(tokens, density);
     case 'grid':
-      return layoutGrid(tokens, density, thumbnailSize);
+      return layoutGrid(tokens, density, thumbnailSize, gridCols);
     default:
-      return layoutNewest(tokens, density, newestCount, thumbnailSize);
+      return layoutNewest(tokens, density, newestCount, thumbnailSize, gridCols);
   }
 }
 
@@ -101,18 +102,18 @@ function getAcquiredTime(t: UnifiedToken): number {
   return 0;
 }
 
-function layoutNewest(tokens: UnifiedToken[], density: number, count: number = 100, thumbnailSize: number = 1.0): UnifiedToken[] {
+function layoutNewest(tokens: UnifiedToken[], density: number, count: number = 100, thumbnailSize: number = 1.0, gridCols: number = 0): UnifiedToken[] {
   const sorted = [...tokens].sort((a, b) => getAcquiredTime(b) - getAcquiredTime(a));
 
   const newest = sorted.slice(0, count);
   const spacing = sizeAwareSpacing(density, thumbnailSize);
-  const positions = gridPositions(newest.length, spacing);
+  const positions = gridPositions(newest.length, spacing, gridCols);
   return newest.map((t, i) => ({ ...t, position: positions[i] }));
 }
 
-function layoutGrid(tokens: UnifiedToken[], density: number, thumbnailSize: number = 1.0): UnifiedToken[] {
+function layoutGrid(tokens: UnifiedToken[], density: number, thumbnailSize: number = 1.0, gridCols: number = 0): UnifiedToken[] {
   const spacing = sizeAwareSpacing(density, thumbnailSize);
-  const positions = gridPositions(tokens.length, spacing);
+  const positions = gridPositions(tokens.length, spacing, gridCols);
   return tokens.map((t, i) => ({ ...t, position: positions[i] }));
 }
 
