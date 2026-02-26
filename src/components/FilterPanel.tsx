@@ -8,7 +8,7 @@ import type { ChainKey } from '@/lib/constants';
 const STANDARDS = ['ERC721', 'ERC1155'];
 const MEDIA_TYPES = ['image', 'video'];
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'chain', label: 'CHAIN' },
+  { value: 'chain', label: 'SPHERE' },
   { value: 'grid', label: 'GRID' },
   { value: 'creator', label: 'CREATOR' },
   { value: 'mediaType', label: 'MEDIA' },
@@ -307,7 +307,7 @@ export default function FilterPanel() {
       </div>
 
       <div style={{ marginBottom: '12px' }}>
-        <span style={labelStyle}>CHAIN</span>
+        <span style={labelStyle}>SPHERE</span>
         <div>
           {CHAIN_KEYS.map((chain) => (
             <ToggleButton

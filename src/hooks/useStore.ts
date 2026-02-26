@@ -39,7 +39,7 @@ export const useStore = create<WalletStore>((set, get) => ({
   filters: {
     standards: ['ERC721', 'ERC1155'],
     mediaTypes: ['image', 'video'],
-    sortBy: 'chain',
+    sortBy: 'grid',
     sortDirection: 'desc',
     searchQuery: '',
     density: 1.0,

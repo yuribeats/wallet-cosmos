@@ -16,12 +16,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    console.log(`Fetching senders for ${wallet} on ${chain}`);
     const senders = await fetchSenders(wallet, chain);
-    console.log(`Found ${senders.length} senders`);
 
-    const addresses = senders.map((s) => s.address);
-    const ensMap = addresses.length > 0 ? await resolveEnsNames(addresses) : new Map();
+    let ensMap = new Map<string, string>();
+    if (senders.length > 0) {
+      try {
+        ensMap = await resolveEnsNames(senders.map((s) => s.address));
+      } catch {
+        // ENS resolution failed, continue without names
+      }
+    }
 
     const enriched = senders.map((s) => ({
       ...s,

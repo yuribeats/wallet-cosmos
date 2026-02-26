@@ -46,9 +46,10 @@ export function useWalletData() {
       fetch(`/api/senders?${new URLSearchParams({ wallet: evmAddress, chain: activeChain })}`)
         .then((r) => r.json())
         .then((d) => {
+          console.log('Senders response:', d);
           if (!cancelled && d.senders) setSenders(d.senders);
         })
-        .catch(() => {});
+        .catch((err) => console.error('Senders fetch failed:', err));
 
       fetch(`/api/transfers?${new URLSearchParams({ wallet: evmAddress })}`)
         .then((r) => r.json())

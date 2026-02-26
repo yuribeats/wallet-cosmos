@@ -163,7 +163,7 @@ export async function fetchSenders(wallet: string, chain: ChainKey): Promise<Sen
 
     for (const tx of response.transfers) {
       const sender = tx.from?.toLowerCase();
-      if (!sender || sender === wallet.toLowerCase()) continue;
+      if (!sender || sender === wallet.toLowerCase() || sender === '0x0000000000000000000000000000000000000000') continue;
 
       const existing = senderMap.get(sender) || { count: 0, contracts: new Set() };
       existing.count++;
