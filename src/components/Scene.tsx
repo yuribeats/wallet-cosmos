@@ -9,7 +9,27 @@ import { CHAINS, type ChainKey } from '@/lib/constants';
 import type { UnifiedToken } from '@/lib/types';
 
 const MAX = 5000;
+const ATLAS = 4096;
+const TILE = 64;
+const TPR = ATLAS / TILE;
+const TUV = TILE / ATLAS;
 const _c = new THREE.Color();
+
+const VERT = `
+attribute vec2 aUV;
+varying vec2 vUv;
+void main() {
+  vUv = uv * ${TUV.toFixed(10)} + aUV;
+  gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+}
+`;
+const FRAG = `
+uniform sampler2D uAtlas;
+void main() {
+  gl_FragColor = texture2D(uAtlas, vUv);
+}
+varying vec2 vUv;
+`;
 
 export default function Scene() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,19 +63,47 @@ export default function Scene() {
     controls.panSpeed = 0.8;
     controls.rotateSpeed = 0.5;
 
+    // Atlas
+    const atlasCanvas = document.createElement('canvas');
+    atlasCanvas.width = ATLAS;
+    atlasCanvas.height = ATLAS;
+    const ctx = atlasCanvas.getContext('2d')!;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, ATLAS, ATLAS);
+
+    const atlasTex = new THREE.CanvasTexture(atlasCanvas);
+    atlasTex.minFilter = THREE.LinearFilter;
+    atlasTex.magFilter = THREE.LinearFilter;
+    atlasTex.generateMipmaps = false;
+
+    const shaderMat = new THREE.ShaderMaterial({
+      uniforms: { uAtlas: { value: atlasTex } },
+      vertexShader: VERT,
+      fragmentShader: FRAG,
+      side: THREE.DoubleSide,
+    });
+
     const geo = new THREE.PlaneGeometry(0.8, 0.8);
-    const mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
-    const mesh = new THREE.InstancedMesh(geo, mat, MAX);
+    const mesh = new THREE.InstancedMesh(geo, shaderMat, MAX);
     mesh.count = 0;
     mesh.frustumCulled = false;
     scene.add(mesh);
 
+    // UV attribute
+    const uvData = new Float32Array(MAX * 2);
+    const uvAttr = new THREE.InstancedBufferAttribute(uvData, 2);
+    geo.setAttribute('aUV', uvAttr);
+
+    // State
     const curr = new Float32Array(MAX * 3);
     const tgt = new Float32Array(MAX * 3);
     let settled = true;
+    let atlasDirty = false;
     let tokenList: UnifiedToken[] = [];
     let prevTokens: UnifiedToken[] = [];
     let prevFilters = useStore.getState().filters;
+    const loaded = new Set<string>();
+    let loadCancel = false;
 
     function rebuild() {
       const state = useStore.getState();
@@ -66,9 +114,15 @@ export default function Scene() {
       const count = positioned.length;
       const buf = mesh.instanceMatrix.array as Float32Array;
 
+      // Cancel any in-flight image loads
+      loadCancel = true;
+      setTimeout(() => { loadCancel = false; startImageLoads(positioned, count); }, 0);
+
       for (let i = 0; i < count; i++) {
-        const pos = positioned[i].position || [0, 0, 0];
+        const token = positioned[i];
+        const pos = token.position || [0, 0, 0];
         const i3 = i * 3;
+
         tgt[i3] = pos[0];
         tgt[i3 + 1] = pos[1];
         tgt[i3 + 2] = pos[2];
@@ -84,15 +138,63 @@ export default function Scene() {
           buf[b + 12] = pos[0]; buf[b + 13] = pos[1]; buf[b + 14] = pos[2]; buf[b + 15] = 1;
         }
 
-        _c.set(CHAINS[positioned[i].chain as ChainKey]?.color || '#ffffff');
-        mesh.setColorAt(i, _c);
+        // UV offset for this tile
+        const col = i % TPR;
+        const row = Math.floor(i / TPR);
+        uvData[i * 2] = col * TUV;
+        uvData[i * 2 + 1] = 1.0 - (row + 1) * TUV;
+
+        // Paint chain color as default
+        if (!loaded.has(token.id)) {
+          const cc = CHAINS[token.chain as ChainKey]?.color || '#444';
+          ctx.fillStyle = cc;
+          ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
+        }
       }
 
+      uvAttr.needsUpdate = true;
       mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      atlasDirty = true;
       mesh.count = count;
       tokenList = positioned;
       settled = false;
+    }
+
+    function startImageLoads(tokens: UnifiedToken[], count: number) {
+      let batch = 0;
+      const BATCH = 20;
+
+      function next() {
+        if (loadCancel) return;
+        const start = batch * BATCH;
+        const end = Math.min(start + BATCH, count);
+        if (start >= count) return;
+
+        for (let i = start; i < end; i++) {
+          const token = tokens[i];
+          if (loaded.has(token.id)) continue;
+          const url = token.media.thumbnail || token.media.image;
+          if (!url) { loaded.add(token.id); continue; }
+
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            if (loadCancel) return;
+            const c = i % TPR;
+            const r = Math.floor(i / TPR);
+            ctx.drawImage(img, c * TILE, r * TILE, TILE, TILE);
+            loaded.add(token.id);
+            atlasDirty = true;
+          };
+          img.onerror = () => { loaded.add(token.id); };
+          img.src = url;
+        }
+
+        batch++;
+        if (end < count) setTimeout(next, 100);
+      }
+
+      next();
     }
 
     const unsub = useStore.subscribe((state) => {
@@ -104,6 +206,7 @@ export default function Scene() {
     });
     rebuild();
 
+    // Click
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
 
@@ -126,6 +229,7 @@ export default function Scene() {
     }
     window.addEventListener('resize', onResize);
 
+    // Render loop
     let raf: number;
     let last = performance.now();
 
@@ -136,6 +240,12 @@ export default function Scene() {
       last = now;
 
       controls.update();
+
+      // Batch atlas upload: max once per frame
+      if (atlasDirty) {
+        atlasTex.needsUpdate = true;
+        atlasDirty = false;
+      }
 
       if (!settled && mesh.count > 0) {
         const f = 1 - Math.pow(0.92, dt * 60);
@@ -166,13 +276,15 @@ export default function Scene() {
     animate();
 
     return () => {
+      loadCancel = true;
       cancelAnimationFrame(raf);
       unsub();
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('click', onClick);
       controls.dispose();
       geo.dispose();
-      mat.dispose();
+      shaderMat.dispose();
+      atlasTex.dispose();
       renderer.dispose();
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
