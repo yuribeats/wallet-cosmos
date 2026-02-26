@@ -23,22 +23,24 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string): Promis
 
   do {
     let response;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      response = await client.nft.getNftsForOwner(wallet, {
+        excludeFilters: [NftFilters.SPAM],
+        pageKey,
+        pageSize: 100,
+      });
+    } catch {
       try {
         response = await client.nft.getNftsForOwner(wallet, {
           excludeFilters: [NftFilters.SPAM],
           pageKey,
           pageSize: 100,
+          omitMetadata: true,
         });
-        break;
       } catch {
-        if (attempt < 2) {
-          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-        }
+        break;
       }
     }
-
-    if (!response) break;
 
     for (const nft of response.ownedNfts) {
       const media = resolveMedia(
