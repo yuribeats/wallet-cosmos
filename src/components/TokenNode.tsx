@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { UnifiedToken } from '@/lib/types';
@@ -33,6 +33,8 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
     }
   }, [token.media.thumbnail, token.media.image]);
 
+  const { camera } = useThree();
+
   useFrame(() => {
     if (!meshRef.current) return;
 
@@ -40,6 +42,8 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
     meshRef.current.position.copy(currentPos.current);
 
     meshRef.current.position.y += Math.sin(Date.now() * 0.001 + currentPos.current.x) * 0.05;
+
+    meshRef.current.quaternion.copy(camera.quaternion);
 
     const targetScale = hovered ? 1.04 : 0.8;
     meshRef.current.scale.lerp(

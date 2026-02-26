@@ -69,9 +69,18 @@ export default function Home() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '16px',
-          background: 'rgba(10, 10, 15, 0.6)',
+          gap: '20px',
+          background: 'rgba(10, 10, 15, 0.85)',
         }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.1)',
+            borderTopColor: '#fff',
+            animation: 'spin 1s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <div style={{
             fontWeight: 'bold',
             fontSize: '12px',
@@ -79,19 +88,7 @@ export default function Home() {
             letterSpacing: '0.15em',
             color: '#fff',
           }}>
-            LOADING {Math.round(loadProgress * 100)}%
-          </div>
-          <div style={{
-            width: '280px',
-            height: '2px',
-            background: 'rgba(255,255,255,0.1)',
-          }}>
-            <div style={{
-              width: `${loadProgress * 100}%`,
-              height: '100%',
-              background: '#fff',
-              transition: 'width 0.3s ease-out',
-            }} />
+            LOADING
           </div>
         </div>
       )}

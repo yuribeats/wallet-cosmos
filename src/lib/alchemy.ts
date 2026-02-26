@@ -155,32 +155,25 @@ export async function fetchSenders(wallet: string, chain: ChainKey): Promise<Sen
   const client = getClient(chain);
   const senderMap = new Map<string, { count: number; contracts: Set<string> }>();
 
-  let pageKey: string | undefined;
-  do {
-    try {
-      const response = await client.core.getAssetTransfers({
-        toAddress: wallet,
-        category: ['erc721' as never, 'erc1155' as never],
-        maxCount: 1000,
-        pageKey,
-      });
+  try {
+    const response = await client.core.getAssetTransfers({
+      toAddress: wallet,
+      category: ['erc721' as never, 'erc1155' as never],
+    });
 
-      for (const tx of response.transfers) {
-        const sender = tx.from?.toLowerCase();
-        if (!sender || sender === wallet.toLowerCase()) continue;
+    for (const tx of response.transfers) {
+      const sender = tx.from?.toLowerCase();
+      if (!sender || sender === wallet.toLowerCase()) continue;
 
-        const existing = senderMap.get(sender) || { count: 0, contracts: new Set() };
-        existing.count++;
-        const contract = (tx.rawContract?.address || '').toLowerCase();
-        if (contract) existing.contracts.add(contract);
-        senderMap.set(sender, existing);
-      }
-
-      pageKey = response.pageKey;
-    } catch {
-      break;
+      const existing = senderMap.get(sender) || { count: 0, contracts: new Set() };
+      existing.count++;
+      const contract = (tx.rawContract?.address || '').toLowerCase();
+      if (contract) existing.contracts.add(contract);
+      senderMap.set(sender, existing);
     }
-  } while (pageKey);
+  } catch (err) {
+    console.error('fetchSenders error:', err);
+  }
 
   return Array.from(senderMap.entries())
     .map(([address, data]) => ({

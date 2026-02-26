@@ -16,9 +16,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    console.log(`Fetching senders for ${wallet} on ${chain}`);
     const senders = await fetchSenders(wallet, chain);
+    console.log(`Found ${senders.length} senders`);
+
     const addresses = senders.map((s) => s.address);
-    const ensMap = await resolveEnsNames(addresses);
+    const ensMap = addresses.length > 0 ? await resolveEnsNames(addresses) : new Map();
 
     const enriched = senders.map((s) => ({
       ...s,
