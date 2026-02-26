@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
 
@@ -13,24 +14,6 @@ const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'date', label: 'DATE' },
   { value: 'tokenType', label: 'TYPE' },
 ];
-
-const panelStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: '20px',
-  left: '20px',
-  zIndex: 50,
-  background: 'rgba(10, 10, 15, 0.85)',
-  backdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  padding: '16px',
-  fontFamily: 'inherit',
-  color: '#fff',
-  minWidth: '240px',
-};
-
-const rowStyle: React.CSSProperties = {
-  marginBottom: '12px',
-};
 
 const labelStyle: React.CSSProperties = {
   fontSize: '10px',
@@ -74,6 +57,7 @@ function ToggleButton({ active, label, color, onClick }: {
 export default function FilterPanel() {
   const filters = useStore((s) => s.filters);
   const setFilter = useStore((s) => s.setFilter);
+  const [collapsed, setCollapsed] = useState(false);
 
   function toggleArrayFilter(key: 'chains' | 'standards' | 'mediaTypes', value: string) {
     const current = filters[key];
@@ -83,9 +67,116 @@ export default function FilterPanel() {
     setFilter(key, next);
   }
 
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen();
+    }
+  }
+
+  if (collapsed) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        left: '20px',
+        zIndex: 50,
+        display: 'flex',
+        gap: '4px',
+      }}>
+        <button
+          onClick={() => setCollapsed(false)}
+          style={{
+            background: 'rgba(10, 10, 15, 0.85)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: '#fff',
+            padding: '8px 12px',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            fontFamily: 'inherit',
+            textTransform: 'uppercase',
+            cursor: 'crosshair',
+            letterSpacing: '0.05em',
+          }}
+        >
+          FILTERS
+        </button>
+        <button
+          onClick={toggleFullscreen}
+          style={{
+            background: 'rgba(10, 10, 15, 0.85)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: '#fff',
+            padding: '8px 12px',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            fontFamily: 'inherit',
+            textTransform: 'uppercase',
+            cursor: 'crosshair',
+            letterSpacing: '0.05em',
+          }}
+        >
+          FULLSCREEN
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div style={panelStyle}>
-      <div style={rowStyle}>
+    <div style={{
+      position: 'fixed',
+      top: '20px',
+      left: '20px',
+      zIndex: 50,
+      background: 'rgba(10, 10, 15, 0.85)',
+      backdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      padding: '16px',
+      fontFamily: 'inherit',
+      color: '#fff',
+      minWidth: '240px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <button
+          onClick={() => setCollapsed(true)}
+          style={{
+            background: 'none',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#666',
+            padding: '3px 8px',
+            fontSize: '9px',
+            fontWeight: 'bold',
+            fontFamily: 'inherit',
+            textTransform: 'uppercase',
+            cursor: 'crosshair',
+            letterSpacing: '0.05em',
+          }}
+        >
+          MINIMIZE
+        </button>
+        <button
+          onClick={toggleFullscreen}
+          style={{
+            background: 'none',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#666',
+            padding: '3px 8px',
+            fontSize: '9px',
+            fontWeight: 'bold',
+            fontFamily: 'inherit',
+            textTransform: 'uppercase',
+            cursor: 'crosshair',
+            letterSpacing: '0.05em',
+          }}
+        >
+          FULLSCREEN
+        </button>
+      </div>
+
+      <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>CHAIN</span>
         <div>
           {CHAIN_KEYS.map((chain) => (
@@ -100,7 +191,7 @@ export default function FilterPanel() {
         </div>
       </div>
 
-      <div style={rowStyle}>
+      <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>TYPE</span>
         <div>
           {STANDARDS.map((s) => (
@@ -114,7 +205,7 @@ export default function FilterPanel() {
         </div>
       </div>
 
-      <div style={rowStyle}>
+      <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>MEDIA</span>
         <div>
           {MEDIA_TYPES.map((m) => (
@@ -128,7 +219,7 @@ export default function FilterPanel() {
         </div>
       </div>
 
-      <div style={rowStyle}>
+      <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>LAYOUT</span>
         <div>
           {SORT_OPTIONS.map((opt) => (
@@ -142,7 +233,7 @@ export default function FilterPanel() {
         </div>
       </div>
 
-      <div style={rowStyle}>
+      <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>DENSITY</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '9px', color: '#555' }}>TIGHT</span>
@@ -167,7 +258,7 @@ export default function FilterPanel() {
         </div>
       </div>
 
-      <div style={rowStyle}>
+      <div style={{ marginBottom: '0' }}>
         <span style={labelStyle}>SEARCH</span>
         <input
           type="text"

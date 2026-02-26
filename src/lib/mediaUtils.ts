@@ -22,10 +22,14 @@ export function detectMediaType(
     if (VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'video';
     if (AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'audio';
     if (HTML_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'html';
-    // If animation_url exists but no recognized extension, assume video
-    if (lower.includes('video') || lower.includes('.mp4')) return 'video';
+    // Any animation_url without recognized extension defaults to video
+    return 'video';
   }
-  if (imageUrl) return 'image';
+  if (imageUrl) {
+    const lower = imageUrl.toLowerCase().split('?')[0];
+    if (VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'video';
+    return 'image';
+  }
   return 'text';
 }
 
@@ -34,7 +38,13 @@ export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
   originalUrl?: string | null;
   thumbnailUrl?: string | null;
 }) {
-  const animationUrl = rawMetadata?.animation_url as string | undefined;
+  // Check multiple animation URI field names used by different contracts
+  const animationUrl = (
+    rawMetadata?.animation_url ||
+    rawMetadata?.animation ||
+    rawMetadata?.video ||
+    rawMetadata?.video_url
+  ) as string | undefined;
   const metadataImage = rawMetadata?.image as string | undefined;
 
   const resolvedImage = resolveUrl(image?.cachedUrl) || resolveUrl(image?.originalUrl) || resolveUrl(metadataImage);
@@ -46,7 +56,7 @@ export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
   return {
     image: resolvedImage,
     thumbnail: resolvedThumbnail,
-    video: mediaType === 'video' ? resolvedAnimation : undefined,
+    video: mediaType === 'video' ? (resolvedAnimation || resolvedImage) : undefined,
     audio: mediaType === 'audio' ? resolvedAnimation : undefined,
     mediaType,
   };

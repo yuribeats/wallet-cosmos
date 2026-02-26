@@ -43,16 +43,12 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string): Promis
         });
         nextPageKey = fallback.pageKey;
 
-        const batch = 10;
-        for (let i = 0; i < fallback.ownedNfts.length; i += batch) {
-          const chunk = fallback.ownedNfts.slice(i, i + batch);
-          const enriched = await Promise.allSettled(
-            chunk.map((n) => client.nft.getNftMetadata(n.contractAddress, n.tokenId))
-          );
-          for (const result of enriched) {
-            if (result.status === 'fulfilled') {
-              nfts.push(result.value as unknown as Record<string, unknown>);
-            }
+        const enriched = await Promise.allSettled(
+          fallback.ownedNfts.map((n) => client.nft.getNftMetadata(n.contractAddress, n.tokenId))
+        );
+        for (const result of enriched) {
+          if (result.status === 'fulfilled') {
+            nfts.push(result.value as unknown as Record<string, unknown>);
           }
         }
       } catch {
