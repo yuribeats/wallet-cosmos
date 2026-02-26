@@ -208,10 +208,60 @@ export async function fetchNewestForChain(chain: ChainKey, wallet: string, limit
   return tokens;
 }
 
+async function buildDateMap(chain: ChainKey, wallet: string): Promise<Map<string, string>> {
+  const dateMap = new Map<string, string>();
+  try {
+    const transfers = await fetchTransfersRaw(chain, wallet, 1000);
+    let latestBlock: number | null = null;
+    let now: number | null = null;
+
+    for (const t of transfers) {
+      const contract = (t.rawContract?.address as string)?.toLowerCase();
+      const rawId = t.erc721TokenId || t.tokenId || t.erc1155Metadata?.[0]?.tokenId;
+      if (!contract || !rawId) continue;
+
+      const decId = BigInt(rawId).toString();
+      const key = `${contract}-${decId}`;
+      if (dateMap.has(key)) continue;
+
+      let timestamp = t.metadata?.blockTimestamp || '';
+      if (!timestamp && t.blockNum) {
+        if (latestBlock === null) {
+          const url = `https://${CHAIN_RPC[chain]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
+          const blockRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
+          });
+          const blockData = await blockRes.json();
+          latestBlock = parseInt(blockData.result, 16);
+          now = Date.now();
+        }
+        const blockNum = parseInt(t.blockNum, 16);
+        timestamp = new Date(now! - (latestBlock - blockNum) * 1000).toISOString();
+      }
+      if (timestamp) dateMap.set(key, timestamp);
+    }
+  } catch { /* date enrichment is best-effort */ }
+  return dateMap;
+}
+
 export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey, limit: number = 0): Promise<UnifiedToken[]> {
   const addr = wallet || DEFAULT_WALLET;
   const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
-  const results = await Promise.allSettled(chains.map((c) => fetchNftsForChain(c, addr, limit)));
+  const results = await Promise.allSettled(
+    chains.map(async (c) => {
+      const [tokens, dateMap] = await Promise.all([
+        fetchNftsForChain(c, addr, limit),
+        buildDateMap(c, addr),
+      ]);
+      return tokens.map((t) => {
+        const key = `${t.contractAddress.toLowerCase()}-${t.tokenId || ''}`;
+        const ts = dateMap.get(key);
+        return ts ? { ...t, mintedAt: ts } : t;
+      });
+    })
+  );
 
   const tokens: UnifiedToken[] = [];
   for (const result of results) {
