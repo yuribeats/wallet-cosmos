@@ -16,7 +16,7 @@ function getClient(chain: ChainKey): Alchemy {
   });
 }
 
-export async function fetchNftsForChain(chain: ChainKey, wallet: string): Promise<UnifiedToken[]> {
+export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: number = 0): Promise<UnifiedToken[]> {
   const client = getClient(chain);
   const tokens: UnifiedToken[] = [];
   let pageKey: string | undefined;
@@ -82,16 +82,17 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string): Promis
       });
     }
 
+    if (limit > 0 && tokens.length >= limit) break;
     pageKey = nextPageKey;
   } while (pageKey);
 
-  return tokens;
+  return limit > 0 ? tokens.slice(0, limit) : tokens;
 }
 
-export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey): Promise<UnifiedToken[]> {
+export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey, limit: number = 0): Promise<UnifiedToken[]> {
   const addr = wallet || DEFAULT_WALLET;
   const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
-  const results = await Promise.allSettled(chains.map((c) => fetchNftsForChain(c, addr)));
+  const results = await Promise.allSettled(chains.map((c) => fetchNftsForChain(c, addr, limit)));
 
   const tokens: UnifiedToken[] = [];
   for (const result of results) {

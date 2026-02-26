@@ -41,7 +41,7 @@ export function useWalletData() {
         let first = true;
 
         const fetches = CHAIN_KEYS.map((chain) =>
-          fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, chain })}`)
+          fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, chain, limit: '100' })}`)
             .then(async (res) => {
               if (cancelled) return;
               const data = await res.json();
