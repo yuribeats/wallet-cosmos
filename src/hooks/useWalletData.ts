@@ -4,10 +4,10 @@ import { useEffect } from 'react';
 import { useStore } from './useStore';
 
 export function useWalletData() {
-  const { setTokens, setConnections, setLoading, setError, tokens } = useStore();
+  const { walletAddress, walletLoaded, setTokens, setConnections, setLoading, setError } = useStore();
 
   useEffect(() => {
-    if (tokens.length > 0) return;
+    if (!walletLoaded || !walletAddress) return;
 
     let cancelled = false;
 
@@ -16,9 +16,11 @@ export function useWalletData() {
       setError(null);
 
       try {
+        const params = new URLSearchParams({ wallet: walletAddress });
+
         const [nftRes, tokenRes] = await Promise.all([
-          fetch('/api/nfts'),
-          fetch('/api/tokens'),
+          fetch(`/api/nfts?${params}`),
+          fetch(`/api/tokens?${params}`),
         ]);
 
         if (cancelled) return;
@@ -32,8 +34,7 @@ export function useWalletData() {
         const allTokens = [...(nftData.tokens || []), ...(tokenData.tokens || [])];
         setTokens(allTokens);
 
-        // Fetch connections in background
-        fetch('/api/transfers')
+        fetch(`/api/transfers?${params}`)
           .then((r) => r.json())
           .then((data) => {
             if (!cancelled && data.connections) {
@@ -52,5 +53,5 @@ export function useWalletData() {
 
     load();
     return () => { cancelled = true; };
-  }, [setTokens, setConnections, setLoading, setError, tokens.length]);
+  }, [walletAddress, walletLoaded, setTokens, setConnections, setLoading, setError]);
 }

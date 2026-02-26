@@ -1,12 +1,12 @@
 'use client';
 
 import { useStore } from '@/hooks/useStore';
-import { CHAINS, WALLET_ADDRESS, CHAIN_KEYS, type ChainKey } from '@/lib/constants';
+import { CHAINS, CHAIN_KEYS, type ChainKey } from '@/lib/constants';
 
 export default function HUD() {
-  const { tokens, isLoading, filters } = useStore();
+  const { tokens, isLoading, walletAddress } = useStore();
   const filteredCount = useStore((s) => s.getFilteredTokens().length);
-  const truncAddr = `${WALLET_ADDRESS.slice(0, 6)}...${WALLET_ADDRESS.slice(-4)}`;
+  const truncAddr = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '';
 
   const chainCounts: Record<string, number> = {};
   for (const chain of CHAIN_KEYS) {

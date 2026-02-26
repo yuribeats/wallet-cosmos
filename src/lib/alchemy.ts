@@ -1,10 +1,12 @@
 import { Alchemy, Network, NftFilters } from 'alchemy-sdk';
-import { WALLET_ADDRESS, CHAIN_KEYS, type ChainKey } from './constants';
+import { DEFAULT_WALLET, EVM_CHAIN_KEYS, type ChainKey } from './constants';
 import { resolveMedia } from './mediaUtils';
 import type { UnifiedToken, WalletConnection } from './types';
 
-function getClient(chain: ChainKey): Alchemy {
-  const networkMap: Record<ChainKey, Network> = {
+type EvmChainKey = Exclude<ChainKey, 'solana'>;
+
+function getClient(chain: EvmChainKey): Alchemy {
+  const networkMap: Record<EvmChainKey, Network> = {
     ethereum: Network.ETH_MAINNET,
     base: Network.BASE_MAINNET,
     optimism: Network.OPT_MAINNET,
@@ -16,13 +18,13 @@ function getClient(chain: ChainKey): Alchemy {
   });
 }
 
-export async function fetchNftsForChain(chain: ChainKey): Promise<UnifiedToken[]> {
+export async function fetchNftsForChain(chain: EvmChainKey, wallet: string): Promise<UnifiedToken[]> {
   const client = getClient(chain);
   const tokens: UnifiedToken[] = [];
   let pageKey: string | undefined;
 
   do {
-    const response = await client.nft.getNftsForOwner(WALLET_ADDRESS, {
+    const response = await client.nft.getNftsForOwner(wallet, {
       excludeFilters: [NftFilters.SPAM],
       pageKey,
       pageSize: 100,
@@ -60,9 +62,11 @@ export async function fetchNftsForChain(chain: ChainKey): Promise<UnifiedToken[]
   return tokens;
 }
 
-export async function fetchAllNfts(chainFilter?: ChainKey): Promise<UnifiedToken[]> {
-  const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
-  const results = await Promise.allSettled(chains.map((c) => fetchNftsForChain(c)));
+export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey): Promise<UnifiedToken[]> {
+  const addr = wallet || DEFAULT_WALLET;
+  const chains = chainFilter ? [chainFilter] : EVM_CHAIN_KEYS;
+  const evmChains = chains.filter((c) => c !== 'solana') as EvmChainKey[];
+  const results = await Promise.allSettled(evmChains.map((c) => fetchNftsForChain(c, addr)));
 
   const tokens: UnifiedToken[] = [];
   for (const result of results) {
@@ -73,9 +77,9 @@ export async function fetchAllNfts(chainFilter?: ChainKey): Promise<UnifiedToken
   return tokens;
 }
 
-export async function fetchErc20ForChain(chain: ChainKey): Promise<UnifiedToken[]> {
+export async function fetchErc20ForChain(chain: EvmChainKey, wallet: string): Promise<UnifiedToken[]> {
   const client = getClient(chain);
-  const balances = await client.core.getTokenBalances(WALLET_ADDRESS);
+  const balances = await client.core.getTokenBalances(wallet);
   const tokens: UnifiedToken[] = [];
 
   const nonZero = balances.tokenBalances.filter(
@@ -115,9 +119,11 @@ export async function fetchErc20ForChain(chain: ChainKey): Promise<UnifiedToken[
   return tokens;
 }
 
-export async function fetchAllErc20(chainFilter?: ChainKey): Promise<UnifiedToken[]> {
-  const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
-  const results = await Promise.allSettled(chains.map((c) => fetchErc20ForChain(c)));
+export async function fetchAllErc20(wallet?: string, chainFilter?: ChainKey): Promise<UnifiedToken[]> {
+  const addr = wallet || DEFAULT_WALLET;
+  const chains = chainFilter ? [chainFilter] : EVM_CHAIN_KEYS;
+  const evmChains = chains.filter((c) => c !== 'solana') as EvmChainKey[];
+  const results = await Promise.allSettled(evmChains.map((c) => fetchErc20ForChain(c, addr)));
 
   const tokens: UnifiedToken[] = [];
   for (const result of results) {
@@ -128,21 +134,84 @@ export async function fetchAllErc20(chainFilter?: ChainKey): Promise<UnifiedToke
   return tokens;
 }
 
-export async function fetchTransfers(chainFilter?: ChainKey): Promise<WalletConnection[]> {
-  const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
+export async function fetchSolanaAssets(wallet: string): Promise<UnifiedToken[]> {
+  const apiKey = process.env.ALCHEMY_API_KEY;
+  const url = `https://solana-mainnet.g.alchemy.com/v2/${apiKey}`;
+  const tokens: UnifiedToken[] = [];
+  let page = 1;
+
+  do {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'getAssetsByOwner',
+        params: {
+          ownerAddress: wallet,
+          page,
+          limit: 1000,
+          displayOptions: { showFungible: true },
+        },
+      }),
+    });
+
+    const data = await res.json();
+    const items = data?.result?.items;
+    if (!items || items.length === 0) break;
+
+    for (const asset of items) {
+      const isFungible = asset.interface === 'FungibleToken' || asset.interface === 'FungibleAsset';
+      const imageUrl = asset.content?.links?.image || asset.content?.files?.[0]?.uri || undefined;
+
+      tokens.push({
+        id: `solana-${asset.id}`,
+        chain: 'solana',
+        contractAddress: asset.id,
+        tokenId: undefined,
+        standard: isFungible ? 'ERC20' : 'ERC721',
+        name: asset.content?.metadata?.name || asset.id.slice(0, 8),
+        description: asset.content?.metadata?.description || undefined,
+        creator: asset.authorities?.[0]?.address || undefined,
+        collectionName: asset.grouping?.find((g: { group_key: string; group_value: string }) => g.group_key === 'collection')?.group_value || undefined,
+        media: {
+          image: imageUrl,
+          thumbnail: imageUrl,
+          mediaType: imageUrl ? 'image' : 'text',
+        },
+        balance: asset.token_info?.balance || undefined,
+        symbol: asset.token_info?.symbol || asset.content?.metadata?.symbol || undefined,
+        decimals: asset.token_info?.decimals || undefined,
+        attributes: asset.content?.metadata?.attributes || undefined,
+        rawMetadata: asset.content?.metadata || undefined,
+      });
+    }
+
+    if (items.length < 1000) break;
+    page++;
+  } while (true);
+
+  return tokens;
+}
+
+export async function fetchTransfers(wallet?: string, chainFilter?: ChainKey): Promise<WalletConnection[]> {
+  const addr = wallet || DEFAULT_WALLET;
+  const chains = chainFilter ? [chainFilter] : EVM_CHAIN_KEYS;
+  const evmChains = chains.filter((c) => c !== 'solana') as EvmChainKey[];
   const connectionMap = new Map<string, { count: number; chains: Set<string>; types: Set<string> }>();
 
-  for (const chain of chains) {
+  for (const chain of evmChains) {
     const client = getClient(chain);
 
     const [sent, received] = await Promise.allSettled([
       client.core.getAssetTransfers({
-        fromAddress: WALLET_ADDRESS,
+        fromAddress: addr,
         category: ['erc721' as never, 'erc1155' as never, 'erc20' as never],
         maxCount: 100,
       }),
       client.core.getAssetTransfers({
-        toAddress: WALLET_ADDRESS,
+        toAddress: addr,
         category: ['erc721' as never, 'erc1155' as never, 'erc20' as never],
         maxCount: 100,
       }),
@@ -154,11 +223,11 @@ export async function fetchTransfers(chainFilter?: ChainKey): Promise<WalletConn
     ];
 
     for (const tx of transfers) {
-      const otherAddress = tx.from.toLowerCase() === WALLET_ADDRESS.toLowerCase()
+      const otherAddress = tx.from.toLowerCase() === addr.toLowerCase()
         ? tx.to
         : tx.from;
 
-      if (!otherAddress || otherAddress.toLowerCase() === WALLET_ADDRESS.toLowerCase()) continue;
+      if (!otherAddress || otherAddress.toLowerCase() === addr.toLowerCase()) continue;
 
       const key = otherAddress.toLowerCase();
       const existing = connectionMap.get(key) || { count: 0, chains: new Set(), types: new Set() };

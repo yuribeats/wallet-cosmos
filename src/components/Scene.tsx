@@ -2,7 +2,6 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
-import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { useStore } from '@/hooks/useStore';
 import TokenCloud from './TokenCloud';
 import ConnectionLines from './ConnectionLines';
@@ -46,13 +45,6 @@ export default function Scene() {
         rotateSpeed={0.5}
       />
 
-      <EffectComposer>
-        <Bloom
-          luminanceThreshold={0.6}
-          luminanceSmoothing={0.4}
-          intensity={0.5}
-        />
-      </EffectComposer>
     </Canvas>
   );
 }

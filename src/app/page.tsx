@@ -6,13 +6,18 @@ import { useStore } from '@/hooks/useStore';
 import FilterPanel from '@/components/FilterPanel';
 import TokenDetail from '@/components/TokenDetail';
 import HUD from '@/components/HUD';
+import WalletInput from '@/components/WalletInput';
 
 const Scene = dynamic(() => import('@/components/Scene'), { ssr: false });
 
 export default function Home() {
   useWalletData();
 
-  const { selectedToken, setSelectedToken, isLoading, error } = useStore();
+  const { walletLoaded, selectedToken, setSelectedToken, isLoading, error } = useStore();
+
+  if (!walletLoaded) {
+    return <WalletInput />;
+  }
 
   return (
     <main style={{ width: '100vw', height: '100vh', position: 'relative', cursor: 'crosshair' }}>
