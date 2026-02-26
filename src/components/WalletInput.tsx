@@ -4,23 +4,50 @@ import { useState } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { DEFAULT_WALLET, isEvmAddress } from '@/lib/constants';
 
+function isEnsName(value: string): boolean {
+  return value.includes('.') && !value.startsWith('0x');
+}
+
 export default function WalletInput() {
   const [value, setValue] = useState(DEFAULT_WALLET);
   const [error, setError] = useState('');
+  const [resolving, setResolving] = useState(false);
   const loadWallet = useStore((s) => s.loadWallet);
 
-  function handleLoad() {
-    const addr = value.trim();
-    if (!addr) {
-      setError('ENTER A WALLET ADDRESS');
+  async function handleLoad() {
+    const input = value.trim();
+    if (!input) {
+      setError('ENTER A WALLET ADDRESS OR ENS NAME');
       return;
     }
-    if (!isEvmAddress(addr)) {
-      setError('INVALID EVM ADDRESS');
+
+    if (isEvmAddress(input)) {
+      setError('');
+      loadWallet(input);
       return;
     }
-    setError('');
-    loadWallet(addr);
+
+    if (isEnsName(input)) {
+      setResolving(true);
+      setError('');
+      try {
+        const res = await fetch(`/api/resolve-ens?${new URLSearchParams({ name: input })}`);
+        const data = await res.json();
+        if (!res.ok || !data.address) {
+          setError('ENS NAME NOT FOUND');
+          setResolving(false);
+          return;
+        }
+        setResolving(false);
+        loadWallet(data.address);
+      } catch {
+        setError('FAILED TO RESOLVE ENS');
+        setResolving(false);
+      }
+      return;
+    }
+
+    setError('INVALID ADDRESS OR ENS NAME');
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -50,7 +77,7 @@ export default function WalletInput() {
           alignSelf: 'flex-start',
           marginLeft: '2px',
         }}>
-          WALLET ADDRESS
+          WALLET ADDRESS OR ENS NAME
         </div>
         <input
           type="text"
@@ -58,7 +85,7 @@ export default function WalletInput() {
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           spellCheck={false}
-          placeholder="0X..."
+          placeholder="0X... OR NAME.ETH"
           style={{
             width: '520px',
             maxWidth: '90vw',
@@ -91,6 +118,7 @@ export default function WalletInput() {
 
       <button
         onClick={handleLoad}
+        disabled={resolving}
         style={{
           background: '#fff',
           color: '#0a0a0f',
@@ -103,9 +131,10 @@ export default function WalletInput() {
           letterSpacing: '0.15em',
           cursor: 'crosshair',
           marginTop: '8px',
+          opacity: resolving ? 0.5 : 1,
         }}
       >
-        LOAD
+        {resolving ? 'RESOLVING...' : 'LOAD'}
       </button>
     </div>
   );
