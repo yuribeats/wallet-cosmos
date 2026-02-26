@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect } from 'react';
+import { useRef, useMemo, useCallback } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { UnifiedToken } from '@/lib/types';
@@ -13,6 +13,7 @@ interface TokenCloudProps {
   onSelect: (token: UnifiedToken) => void;
 }
 
+const MAX_INSTANCES = 5000;
 const dummy = new THREE.Object3D();
 const tmpColor = new THREE.Color();
 
@@ -20,8 +21,8 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
   const sortBy = useStore((s) => s.filters.sortBy);
   const density = useStore((s) => s.filters.density);
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const hoveredRef = useRef<number | null>(null);
-  const currentPositions = useRef<Float32Array | null>(null);
+  const currentPositions = useRef<Float32Array>(new Float32Array(MAX_INSTANCES * 3));
+  const prevCount = useRef(0);
 
   const positionedTokens = useMemo(
     () => computePositions(tokens, sortBy, density),
@@ -51,15 +52,34 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
     return arr;
   }, [positionedTokens]);
 
-  useEffect(() => {
+  useFrame(() => {
     const mesh = meshRef.current;
-    if (!mesh || positionedTokens.length === 0) return;
+    if (!mesh) return;
 
-    currentPositions.current = new Float32Array(targetPositions);
+    const count = positionedTokens.length;
+    mesh.count = count;
 
-    for (let i = 0; i < positionedTokens.length; i++) {
+    if (count === 0) return;
+
+    if (count !== prevCount.current) {
+      for (let i = prevCount.current * 3; i < count * 3; i++) {
+        currentPositions.current[i] = targetPositions[i] || 0;
+      }
+      prevCount.current = count;
+    }
+
+    const cur = currentPositions.current;
+    const t = Date.now() * 0.001;
+
+    for (let i = 0; i < count; i++) {
       const i3 = i * 3;
-      dummy.position.set(targetPositions[i3], targetPositions[i3 + 1], targetPositions[i3 + 2]);
+      cur[i3] += (targetPositions[i3] - cur[i3]) * 0.06;
+      cur[i3 + 1] += (targetPositions[i3 + 1] - cur[i3 + 1]) * 0.06;
+      cur[i3 + 2] += (targetPositions[i3 + 2] - cur[i3 + 2]) * 0.06;
+
+      const bob = Math.sin(t + cur[i3]) * 0.03;
+
+      dummy.position.set(cur[i3], cur[i3 + 1] + bob, cur[i3 + 2]);
       dummy.scale.setScalar(0.8);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
@@ -70,31 +90,6 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [positionedTokens, targetPositions, chainColors]);
-
-  useFrame(() => {
-    const mesh = meshRef.current;
-    if (!mesh || positionedTokens.length === 0 || !currentPositions.current) return;
-
-    const cur = currentPositions.current;
-    const t = Date.now() * 0.001;
-
-    for (let i = 0; i < positionedTokens.length; i++) {
-      const i3 = i * 3;
-      cur[i3] += (targetPositions[i3] - cur[i3]) * 0.04;
-      cur[i3 + 1] += (targetPositions[i3 + 1] - cur[i3 + 1]) * 0.04;
-      cur[i3 + 2] += (targetPositions[i3 + 2] - cur[i3 + 2]) * 0.04;
-
-      const bob = Math.sin(t + cur[i3]) * 0.05;
-      const scale = i === hoveredRef.current ? 1.2 : 0.8;
-
-      dummy.position.set(cur[i3], cur[i3 + 1] + bob, cur[i3 + 2]);
-      dummy.scale.setScalar(scale);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
-
-    mesh.instanceMatrix.needsUpdate = true;
   });
 
   const { raycaster, camera, pointer } = useThree();
@@ -110,12 +105,10 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
     }
   }, [positionedTokens, onSelect, raycaster, camera, pointer]);
 
-  if (positionedTokens.length === 0) return null;
-
   return (
     <instancedMesh
       ref={meshRef}
-      args={[undefined, undefined, positionedTokens.length]}
+      args={[undefined, undefined, MAX_INSTANCES]}
       onClick={handleClick}
       frustumCulled={false}
     >
