@@ -90,10 +90,69 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
   return limit > 0 ? tokens.slice(0, limit) : tokens;
 }
 
+async function enrichTokenDates(tokens: UnifiedToken[], chain: ChainKey, wallet: string): Promise<UnifiedToken[]> {
+  const client = getClient(chain);
+
+  try {
+    const result = await client.core.getAssetTransfers({
+      toAddress: wallet,
+      category: ['erc721' as never, 'erc1155' as never],
+      order: 'desc' as never,
+      withMetadata: true,
+      maxCount: 500,
+    });
+
+    const dateMap = new Map<string, string>();
+    const missingBlocks = new Set<string>();
+
+    for (const t of result.transfers) {
+      const contract = t.rawContract?.address?.toLowerCase();
+      const rawId = t.erc721TokenId || t.tokenId || (t.erc1155Metadata as Array<{ tokenId: string }> | null)?.[0]?.tokenId;
+      if (!contract || !rawId) continue;
+      const decId = BigInt(rawId).toString();
+      const key = `${contract}-${decId}`;
+      if (dateMap.has(key)) continue;
+
+      const meta = t.metadata as { blockTimestamp?: string } | null;
+      if (meta?.blockTimestamp) {
+        dateMap.set(key, meta.blockTimestamp);
+      } else if (t.blockNum) {
+        missingBlocks.add(t.blockNum);
+        dateMap.set(key, t.blockNum);
+      }
+    }
+
+    if (missingBlocks.size > 0) {
+      const latestBlock = await client.core.getBlockNumber();
+      const now = Date.now();
+      for (const [key, val] of dateMap) {
+        if (val.startsWith('0x')) {
+          const blockNum = parseInt(val, 16);
+          const estimatedMs = now - (latestBlock - blockNum) * 1000;
+          dateMap.set(key, new Date(estimatedMs).toISOString());
+        }
+      }
+    }
+
+    return tokens.map((token) => {
+      const key = `${token.contractAddress.toLowerCase()}-${token.tokenId || ''}`;
+      const ts = dateMap.get(key);
+      return ts ? { ...token, mintedAt: ts } : token;
+    });
+  } catch {
+    return tokens;
+  }
+}
+
 export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey, limit: number = 0): Promise<UnifiedToken[]> {
   const addr = wallet || DEFAULT_WALLET;
   const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
-  const results = await Promise.allSettled(chains.map((c) => fetchNftsForChain(c, addr, limit)));
+  const results = await Promise.allSettled(
+    chains.map(async (c) => {
+      const tokens = await fetchNftsForChain(c, addr, limit);
+      return enrichTokenDates(tokens, c, addr);
+    })
+  );
 
   const tokens: UnifiedToken[] = [];
   for (const result of results) {
