@@ -42,6 +42,7 @@ export const useStore = create<WalletStore>((set, get) => ({
     searchQuery: '',
     density: 0.4,
     newestCount: 100,
+    thumbnailSize: 1.0,
   },
   selectedToken: null,
   isLoading: false,

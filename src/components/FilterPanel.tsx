@@ -305,6 +305,31 @@ export default function FilterPanel() {
         </div>
       </div>
 
+      <div style={{ marginBottom: '12px' }}>
+        <span style={labelStyle}>SIZE</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '9px', color: '#555' }}>SM</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={filters.thumbnailSize * 100}
+            onChange={(e) => setFilter('thumbnailSize', Number(e.target.value) / 100)}
+            style={{
+              flex: 1,
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              height: '2px',
+              background: 'rgba(255,255,255,0.2)',
+              outline: 'none',
+              cursor: 'crosshair',
+              accentColor: '#fff',
+            }}
+          />
+          <span style={{ fontSize: '9px', color: '#555' }}>LG</span>
+        </div>
+      </div>
+
       <div style={{ marginBottom: '0' }}>
         <span style={labelStyle}>SEARCH</span>
         <input

@@ -41,4 +41,5 @@ export type FilterState = {
   selectedCreator?: string;
   density: number;
   newestCount: number;
+  thumbnailSize: number;
 };

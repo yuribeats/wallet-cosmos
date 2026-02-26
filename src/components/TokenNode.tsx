@@ -6,6 +6,7 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { UnifiedToken } from '@/lib/types';
 import { CHAINS, type ChainKey } from '@/lib/constants';
+import { useStore } from '@/hooks/useStore';
 
 interface TokenNodeProps {
   token: UnifiedToken;
@@ -14,6 +15,7 @@ interface TokenNodeProps {
 }
 
 export default function TokenNode({ token, targetPosition, onSelect }: TokenNodeProps) {
+  const thumbnailSize = useStore((s) => s.filters.thumbnailSize);
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -47,7 +49,8 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
 
     meshRef.current.quaternion.copy(camera.quaternion);
 
-    const targetScale = hovered ? 1.04 : 0.8;
+    const baseScale = 0.4 + thumbnailSize * 1.2;
+    const targetScale = hovered ? baseScale * 1.05 : baseScale;
     meshRef.current.scale.lerp(
       new THREE.Vector3(targetScale, targetScale, targetScale),
       0.1
