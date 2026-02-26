@@ -84,6 +84,7 @@ export default function Scene() {
     });
 
     const geo = new THREE.PlaneGeometry(0.8, 0.8);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 500);
     const mesh = new THREE.InstancedMesh(geo, shaderMat, MAX);
     mesh.count = 0;
     mesh.frustumCulled = false;
@@ -156,9 +157,40 @@ export default function Scene() {
     }
 
     // Concurrent image loader — 50 at a time, no delays
+    // On CORS failure, retries through server proxy
     function startImageLoads(tokens: UnifiedToken[], count: number) {
       let nextIdx = 0;
       let active = 0;
+
+      function drawTile(img: HTMLImageElement, i: number) {
+        if (loadCancel) return;
+        const c = i % TPR;
+        const r = Math.floor(i / TPR);
+        ctx.drawImage(img, c * TILE, r * TILE, TILE, TILE);
+        atlasDirty = true;
+      }
+
+      function done(id: string) {
+        loaded.add(id);
+        active--;
+        loadNext();
+      }
+
+      function loadOne(i: number, url: string, id: string, proxied: boolean) {
+        active++;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => { drawTile(img, i); done(id); };
+        img.onerror = () => {
+          if (!proxied) {
+            active--;
+            loadOne(i, '/api/image?url=' + encodeURIComponent(url), id, true);
+          } else {
+            done(id);
+          }
+        };
+        img.src = proxied ? url : url;
+      }
 
       function loadNext() {
         while (active < 50 && nextIdx < count) {
@@ -167,27 +199,7 @@ export default function Scene() {
           if (loaded.has(token.id)) continue;
           const url = token.media.thumbnail || token.media.image;
           if (!url) { loaded.add(token.id); continue; }
-
-          active++;
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => {
-            if (!loadCancel) {
-              const c = i % TPR;
-              const r = Math.floor(i / TPR);
-              ctx.drawImage(img, c * TILE, r * TILE, TILE, TILE);
-              atlasDirty = true;
-            }
-            loaded.add(token.id);
-            active--;
-            loadNext();
-          };
-          img.onerror = () => {
-            loaded.add(token.id);
-            active--;
-            loadNext();
-          };
-          img.src = url;
+          loadOne(i, url, token.id, false);
         }
       }
       loadNext();
