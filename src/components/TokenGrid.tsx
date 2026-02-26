@@ -127,7 +127,7 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
     }}>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(120px, 1fr))',
+        gridTemplateColumns: isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
         gap: '2px',
       }}>
         {displayTokens.map((token) => (
