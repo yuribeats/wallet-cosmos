@@ -22,14 +22,16 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
 
   return (
     <group>
-      {positionedTokens.map((token) => (
-        <TokenNode
-          key={token.id}
-          token={token}
-          targetPosition={token.position || [0, 0, 0]}
-          onSelect={onSelect}
-        />
-      ))}
+      {positionedTokens
+        .filter((token) => token.media.thumbnail || token.media.image)
+        .map((token) => (
+          <TokenNode
+            key={token.id}
+            token={token}
+            targetPosition={token.position || [0, 0, 0]}
+            onSelect={onSelect}
+          />
+        ))}
     </group>
   );
 }
