@@ -59,13 +59,14 @@ const CHAIN_OFFSETS: Record<ChainKey, [number, number, number]> = {
 export function computePositions(
   tokens: UnifiedToken[],
   sortBy: FilterState['sortBy'],
-  density: number = 1.0
+  density: number = 1.0,
+  newestCount: number = 100
 ): UnifiedToken[] {
   if (tokens.length === 0) return [];
 
   switch (sortBy) {
     case 'newest':
-      return layoutNewest(tokens, density);
+      return layoutNewest(tokens, density, newestCount);
     case 'chain':
       return layoutByChain(tokens, density);
     case 'creator':
@@ -79,7 +80,7 @@ export function computePositions(
     case 'grid':
       return layoutGrid(tokens, density);
     default:
-      return layoutNewest(tokens, density);
+      return layoutNewest(tokens, density, newestCount);
   }
 }
 
@@ -88,14 +89,14 @@ function applyDensity(positions: [number, number, number][], density: number): [
   return positions.map(([x, y, z]) => [x * scale, y * scale, z * scale]);
 }
 
-function layoutNewest(tokens: UnifiedToken[], density: number): UnifiedToken[] {
+function layoutNewest(tokens: UnifiedToken[], density: number, count: number = 100): UnifiedToken[] {
   const sorted = [...tokens].sort((a, b) => {
     const da = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
     const db = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
     return db - da;
   });
 
-  const newest = sorted.slice(0, 100);
+  const newest = sorted.slice(0, count);
   const spacing = 0.6 + density * 2.4;
   const positions = gridPositions(newest.length, spacing);
   return newest.map((t, i) => ({ ...t, position: positions[i] }));

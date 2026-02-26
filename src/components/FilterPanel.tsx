@@ -14,7 +14,6 @@ const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'mediaType', label: 'MEDIA' },
   { value: 'date', label: 'DATE' },
   { value: 'tokenType', label: 'TYPE' },
-  { value: 'newest', label: 'NEWEST 100' },
 ];
 
 const labelStyle: React.CSSProperties = {
@@ -192,6 +191,50 @@ export default function FilterPanel() {
               onClick={() => setActiveChain(chain as ChainKey)}
             />
           ))}
+          <div style={{ display: 'inline-flex', alignItems: 'center', marginBottom: '4px' }}>
+            <button
+              onClick={() => setFilter('sortBy', 'newest')}
+              style={{
+                background: filters.sortBy === 'newest' ? 'rgba(255,255,255,0.15)' : 'transparent',
+                border: `1px solid ${filters.sortBy === 'newest' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                borderRight: 'none',
+                color: filters.sortBy === 'newest' ? '#fff' : '#555',
+                padding: '4px 8px',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                fontFamily: 'inherit',
+                textTransform: 'uppercase',
+                cursor: 'crosshair',
+                letterSpacing: '0.05em',
+              }}
+            >
+              NEWEST
+            </button>
+            <input
+              type="number"
+              min={1}
+              max={9999}
+              value={filters.newestCount}
+              onChange={(e) => {
+                const v = parseInt(e.target.value) || 100;
+                setFilter('newestCount', Math.max(1, v));
+                if (filters.sortBy !== 'newest') setFilter('sortBy', 'newest');
+              }}
+              style={{
+                width: '48px',
+                background: filters.sortBy === 'newest' ? 'rgba(255,255,255,0.15)' : 'transparent',
+                border: `1px solid ${filters.sortBy === 'newest' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                color: filters.sortBy === 'newest' ? '#fff' : '#555',
+                padding: '4px 6px',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                fontFamily: 'inherit',
+                textAlign: 'center',
+                outline: 'none',
+                cursor: 'crosshair',
+              }}
+            />
+          </div>
         </div>
       </div>
 

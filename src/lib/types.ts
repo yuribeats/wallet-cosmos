@@ -40,4 +40,5 @@ export type FilterState = {
   searchQuery: string;
   selectedCreator?: string;
   density: number;
+  newestCount: number;
 };
