@@ -17,7 +17,7 @@ export default function Scene() {
 
   return (
     <Canvas
-      camera={{ position: [0, 0, 60], fov: 60 }}
+      camera={{ position: [0, 0, 35], fov: 60 }}
       style={{ position: 'fixed', inset: 0, background: '#0a0a0f' }}
       gl={{ antialias: true, alpha: false }}
     >

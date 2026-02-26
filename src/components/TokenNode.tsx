@@ -16,6 +16,7 @@ interface TokenNodeProps {
 export default function TokenNode({ token, targetPosition, onSelect }: TokenNodeProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const currentPos = useRef(new THREE.Vector3(...targetPosition));
   const targetVec = useMemo(() => new THREE.Vector3(...targetPosition), [targetPosition]);
 
@@ -24,13 +25,14 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
   const texture = useMemo(() => {
     const url = token.media.thumbnail || token.media.image;
     if (!url) return null;
-    try {
-      const tex = new THREE.TextureLoader().load(url);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    } catch {
-      return null;
-    }
+    const tex = new THREE.TextureLoader().load(
+      url,
+      () => setLoaded(true),
+      undefined,
+      () => setLoaded(false),
+    );
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
   }, [token.media.thumbnail, token.media.image]);
 
   const { camera } = useThree();
@@ -52,6 +54,10 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
     );
   });
 
+  if (!texture || (!loaded && !hovered)) {
+    return null;
+  }
+
   return (
     <mesh
       ref={meshRef}
@@ -59,25 +65,16 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
       onClick={(e) => { e.stopPropagation(); onSelect(token); }}
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
       onPointerOut={() => setHovered(false)}
+      visible={loaded}
     >
       <planeGeometry args={[1, 1]} />
 
-      {texture ? (
-        <meshBasicMaterial
-          map={texture}
-          side={THREE.DoubleSide}
-          transparent
-          opacity={hovered ? 1 : 0.9}
-        />
-      ) : (
-        <meshStandardMaterial
-          color={chainColor}
-          emissive={chainColor}
-          emissiveIntensity={hovered ? 0.8 : 0.3}
-          transparent
-          opacity={0.85}
-        />
-      )}
+      <meshBasicMaterial
+        map={texture}
+        side={THREE.DoubleSide}
+        transparent
+        opacity={hovered ? 1 : 0.9}
+      />
 
       <mesh position={[0, 0, -0.01]}>
         <ringGeometry args={[0.52, 0.58, 32]} />
