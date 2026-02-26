@@ -25,10 +25,10 @@ void main() {
 `;
 const FRAG = `
 uniform sampler2D uAtlas;
+varying vec2 vUv;
 void main() {
   gl_FragColor = texture2D(uAtlas, vUv);
 }
-varying vec2 vUv;
 `;
 
 export default function Scene() {
