@@ -1,0 +1,58 @@
+'use client';
+
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Stars } from '@react-three/drei';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { useStore } from '@/hooks/useStore';
+import TokenCloud from './TokenCloud';
+import ConnectionLines from './ConnectionLines';
+
+export default function Scene() {
+  const filteredTokens = useStore((s) => s.getFilteredTokens());
+  const connections = useStore((s) => s.connections);
+  const setSelectedToken = useStore((s) => s.setSelectedToken);
+
+  return (
+    <Canvas
+      camera={{ position: [0, 0, 40], fov: 60 }}
+      style={{ position: 'fixed', inset: 0, background: '#0a0a0f' }}
+      gl={{ antialias: true, alpha: false }}
+    >
+      <color attach="background" args={['#0a0a0f']} />
+      <ambientLight intensity={0.3} />
+      <pointLight position={[20, 20, 20]} intensity={0.5} />
+      <pointLight position={[-20, -20, -10]} intensity={0.3} color="#627EEA" />
+
+      <Stars
+        radius={100}
+        depth={80}
+        count={3000}
+        factor={3}
+        saturation={0}
+        fade
+        speed={0.3}
+      />
+
+      <TokenCloud tokens={filteredTokens} onSelect={setSelectedToken} />
+      <ConnectionLines connections={connections} />
+
+      <OrbitControls
+        enableDamping
+        dampingFactor={0.05}
+        minDistance={5}
+        maxDistance={150}
+        enablePan
+        panSpeed={0.8}
+        rotateSpeed={0.5}
+      />
+
+      <EffectComposer>
+        <Bloom
+          luminanceThreshold={0.6}
+          luminanceSmoothing={0.4}
+          intensity={0.5}
+        />
+      </EffectComposer>
+    </Canvas>
+  );
+}

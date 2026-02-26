@@ -1,0 +1,47 @@
+export interface UnifiedToken {
+  id: string;
+  chain: 'ethereum' | 'base' | 'optimism' | 'zora';
+  contractAddress: string;
+  tokenId?: string;
+  standard: 'ERC721' | 'ERC1155' | 'ERC20';
+  name: string;
+  description?: string;
+  creator?: string;
+  collectionName?: string;
+
+  media: {
+    image?: string;
+    thumbnail?: string;
+    video?: string;
+    audio?: string;
+    mediaType: 'image' | 'video' | 'audio' | 'text' | 'html' | 'unknown';
+  };
+
+  balance?: string;
+  symbol?: string;
+  decimals?: number;
+  attributes?: Array<{ trait_type: string; value: string }>;
+  rawMetadata?: Record<string, unknown>;
+  lastUpdated?: string;
+
+  logo?: string;
+
+  position?: [number, number, number];
+}
+
+export interface WalletConnection {
+  address: string;
+  transferCount: number;
+  chains: string[];
+  tokenTypes: string[];
+}
+
+export type FilterState = {
+  chains: string[];
+  standards: string[];
+  mediaTypes: string[];
+  sortBy: 'date' | 'creator' | 'mediaType' | 'tokenType' | 'chain';
+  sortDirection: 'asc' | 'desc';
+  searchQuery: string;
+  selectedCreator?: string;
+};
