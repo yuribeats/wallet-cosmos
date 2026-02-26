@@ -182,16 +182,7 @@ export default function FilterPanel() {
       <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>VIEW</span>
         <div>
-          {CHAIN_KEYS.map((chain) => (
-            <ToggleButton
-              key={chain}
-              active={activeChain === chain}
-              label={CHAINS[chain].name}
-              color={activeChain === chain ? CHAINS[chain].color + '40' : undefined}
-              onClick={() => setActiveChain(chain as ChainKey)}
-            />
-          ))}
-          <div style={{ display: 'inline-flex', alignItems: 'center', marginBottom: '4px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', marginRight: '4px', marginBottom: '4px' }}>
             <button
               onClick={() => setFilter('sortBy', 'newest')}
               style={{
@@ -208,7 +199,7 @@ export default function FilterPanel() {
                 letterSpacing: '0.05em',
               }}
             >
-              NEWEST
+              NEWEST (ALL CHAINS)
             </button>
             <input
               type="number"
@@ -235,6 +226,18 @@ export default function FilterPanel() {
               }}
             />
           </div>
+          {CHAIN_KEYS.map((chain) => (
+            <ToggleButton
+              key={chain}
+              active={filters.sortBy !== 'newest' && activeChain === chain}
+              label={CHAINS[chain].name}
+              color={filters.sortBy !== 'newest' && activeChain === chain ? CHAINS[chain].color + '40' : undefined}
+              onClick={() => {
+                if (filters.sortBy === 'newest') setFilter('sortBy', 'grid');
+                setActiveChain(chain as ChainKey);
+              }}
+            />
+          ))}
         </div>
       </div>
 
