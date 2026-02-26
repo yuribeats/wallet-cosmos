@@ -74,9 +74,6 @@ export default function FilterPanel() {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
 
-  useEffect(() => {
-    if (!isMobile) setCollapsed(false);
-  }, [isMobile]);
 
   function toggleArrayFilter(key: 'standards' | 'mediaTypes', value: string) {
     const current = filters[key];

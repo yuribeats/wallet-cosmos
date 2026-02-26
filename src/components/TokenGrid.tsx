@@ -122,16 +122,13 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
       inset: 0,
       background: '#0a0a0f',
       overflowY: 'auto',
-      padding: '20px 20px 80px 20px',
+      padding: 0,
       zIndex: 1,
     }}>
       <div style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(120px, 1fr))',
         gap: '2px',
-        maxWidth: '1400px',
-        margin: '0 auto',
-        paddingTop: '10px',
       }}>
         {displayTokens.map((token) => (
           <TokenCard key={token.id} token={token} onSelect={onSelect} />
