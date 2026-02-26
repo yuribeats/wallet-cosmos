@@ -8,13 +8,13 @@ import type { ChainKey } from '@/lib/constants';
 const STANDARDS = ['ERC721', 'ERC1155'];
 const MEDIA_TYPES = ['image', 'video'];
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'newest', label: 'NEWEST 100' },
   { value: 'chain', label: 'SPHERE' },
   { value: 'grid', label: 'GRID' },
   { value: 'creator', label: 'CREATOR' },
   { value: 'mediaType', label: 'MEDIA' },
   { value: 'date', label: 'DATE' },
   { value: 'tokenType', label: 'TYPE' },
+  { value: 'newest', label: 'NEWEST 100' },
 ];
 
 const labelStyle: React.CSSProperties = {
@@ -181,7 +181,7 @@ export default function FilterPanel() {
       </div>
 
       <div style={{ marginBottom: '12px' }}>
-        <span style={labelStyle}>SPHERE</span>
+        <span style={labelStyle}>VIEW</span>
         <div>
           {CHAIN_KEYS.map((chain) => (
             <ToggleButton
