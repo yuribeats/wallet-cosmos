@@ -6,16 +6,17 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { UnifiedToken } from '@/lib/types';
 import { CHAINS, type ChainKey } from '@/lib/constants';
-import { useStore } from '@/hooks/useStore';
 
 interface TokenNodeProps {
   token: UnifiedToken;
   targetPosition: [number, number, number];
+  thumbnailSize: number;
   onSelect: (token: UnifiedToken) => void;
 }
 
-export default function TokenNode({ token, targetPosition, onSelect }: TokenNodeProps) {
-  const thumbnailSize = useStore((s) => s.filters.thumbnailSize);
+const _scaleVec = new THREE.Vector3();
+
+export default function TokenNode({ token, targetPosition, thumbnailSize, onSelect }: TokenNodeProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -39,22 +40,20 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
 
   const { camera } = useThree();
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!meshRef.current) return;
 
-    currentPos.current.lerp(targetVec, 0.04);
-    meshRef.current.position.copy(currentPos.current);
+    const lerpFactor = 1 - Math.pow(0.001, delta);
 
-    meshRef.current.position.y += Math.sin(Date.now() * 0.001 + currentPos.current.x) * 0.05;
+    currentPos.current.lerp(targetVec, lerpFactor);
+    meshRef.current.position.copy(currentPos.current);
 
     meshRef.current.quaternion.copy(camera.quaternion);
 
     const baseScale = 0.4 + thumbnailSize * 29.6;
     const targetScale = hovered ? baseScale * 1.05 : baseScale;
-    meshRef.current.scale.lerp(
-      new THREE.Vector3(targetScale, targetScale, targetScale),
-      0.1
-    );
+    _scaleVec.set(targetScale, targetScale, targetScale);
+    meshRef.current.scale.lerp(_scaleVec, lerpFactor);
   });
 
   if (!texture || (!loaded && !hovered)) {
@@ -78,16 +77,6 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
         transparent
         opacity={hovered ? 1 : 0.9}
       />
-
-      <mesh position={[0, 0, -0.01]}>
-        <ringGeometry args={[0.52, 0.58, 32]} />
-        <meshBasicMaterial
-          color={chainColor}
-          transparent
-          opacity={hovered ? 0.7 : 0.25}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
 
       {hovered && (
         <Html

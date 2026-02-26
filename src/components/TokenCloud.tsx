@@ -32,6 +32,7 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
             key={token.id}
             token={token}
             targetPosition={token.position || [0, 0, 0]}
+            thumbnailSize={thumbnailSize}
             onSelect={onSelect}
           />
         ))}
