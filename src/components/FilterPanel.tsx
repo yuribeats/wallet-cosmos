@@ -223,7 +223,7 @@ export default function FilterPanel() {
                 letterSpacing: '0.05em',
               }}
             >
-              NEWEST (ALL CHAINS)
+              NEWEST (BASE)
             </button>
             <input
               type="number"
