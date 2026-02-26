@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import type { UnifiedToken } from '@/lib/types';
 import { CHAINS, type ChainKey } from '@/lib/constants';
 import MediaRenderer from './MediaRenderer';
@@ -14,37 +15,47 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
   const explorerUrl = `${chain.explorer}/address/${token.contractAddress}`;
   const truncAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   return (
     <div style={{
       position: 'fixed',
       top: 0,
       right: 0,
       bottom: 0,
-      width: '420px',
-      background: 'rgba(10, 10, 15, 0.92)',
+      width: mobile ? '100%' : '420px',
+      background: 'rgba(10, 10, 15, 0.95)',
       backdropFilter: 'blur(20px)',
-      borderLeft: '1px solid rgba(255,255,255,0.08)',
+      borderLeft: mobile ? 'none' : '1px solid rgba(255,255,255,0.08)',
       overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
       zIndex: 100,
-      padding: '24px',
+      padding: mobile ? '16px 16px 80px' : '24px',
       fontFamily: 'inherit',
       color: '#fff',
     }}>
       <button
         onClick={onClose}
         style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          background: 'none',
+          position: 'sticky',
+          top: 0,
+          float: 'right',
+          background: 'rgba(10, 10, 15, 0.9)',
           border: '1px solid rgba(255,255,255,0.2)',
           color: '#fff',
-          padding: '6px 12px',
+          padding: mobile ? '8px 14px' : '6px 12px',
           fontFamily: 'inherit',
           fontWeight: 'bold',
           fontSize: '12px',
           textTransform: 'uppercase',
           cursor: 'crosshair',
+          zIndex: 10,
         }}
       >
         CLOSE
@@ -55,7 +66,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
       </div>
 
       <h2 style={{
-        fontSize: '16px',
+        fontSize: mobile ? '14px' : '16px',
         fontWeight: 'bold',
         textTransform: 'uppercase',
         margin: '0 0 16px',
@@ -64,7 +75,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
         {token.name}
       </h2>
 
-      <div style={{ fontSize: '12px', lineHeight: '2', fontFamily: 'monospace' }}>
+      <div style={{ fontSize: mobile ? '11px' : '12px', lineHeight: '2', fontFamily: 'monospace', wordBreak: 'break-all' }}>
         {token.collectionName && (
           <div><span style={{ color: '#666' }}>COLLECTION:</span> {token.collectionName}</div>
         )}

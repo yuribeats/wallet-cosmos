@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
 import type { ChainKey } from '@/lib/constants';
@@ -26,6 +26,17 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
 };
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return mobile;
+}
+
 function ToggleButton({ active, label, color, onClick }: {
   active: boolean;
   label: string;
@@ -39,7 +50,7 @@ function ToggleButton({ active, label, color, onClick }: {
         background: active ? (color || 'rgba(255,255,255,0.15)') : 'transparent',
         border: `1px solid ${active ? (color || 'rgba(255,255,255,0.3)') : 'rgba(255,255,255,0.1)'}`,
         color: active ? '#fff' : '#555',
-        padding: '4px 8px',
+        padding: '6px 10px',
         fontSize: '10px',
         fontWeight: 'bold',
         fontFamily: 'inherit',
@@ -60,7 +71,12 @@ export default function FilterPanel() {
   const setFilter = useStore((s) => s.setFilter);
   const activeChain = useStore((s) => s.activeChain);
   const setActiveChain = useStore((s) => s.setActiveChain);
-  const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useIsMobile();
+  const [collapsed, setCollapsed] = useState(true);
+
+  useEffect(() => {
+    if (!isMobile) setCollapsed(false);
+  }, [isMobile]);
 
   function toggleArrayFilter(key: 'standards' | 'mediaTypes', value: string) {
     const current = filters[key];
@@ -82,8 +98,8 @@ export default function FilterPanel() {
     return (
       <div style={{
         position: 'fixed',
-        top: '20px',
-        left: '20px',
+        top: isMobile ? '10px' : '20px',
+        left: isMobile ? '10px' : '20px',
         zIndex: 50,
         display: 'flex',
         gap: '4px',
@@ -95,7 +111,7 @@ export default function FilterPanel() {
             backdropFilter: 'blur(12px)',
             border: '1px solid rgba(255,255,255,0.08)',
             color: '#fff',
-            padding: '8px 12px',
+            padding: isMobile ? '10px 14px' : '8px 12px',
             fontSize: '10px',
             fontWeight: 'bold',
             fontFamily: 'inherit',
@@ -106,24 +122,26 @@ export default function FilterPanel() {
         >
           FILTERS
         </button>
-        <button
-          onClick={toggleFullscreen}
-          style={{
-            background: 'rgba(10, 10, 15, 0.85)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: '#fff',
-            padding: '8px 12px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            fontFamily: 'inherit',
-            textTransform: 'uppercase',
-            cursor: 'crosshair',
-            letterSpacing: '0.05em',
-          }}
-        >
-          FULLSCREEN
-        </button>
+        {!isMobile && (
+          <button
+            onClick={toggleFullscreen}
+            style={{
+              background: 'rgba(10, 10, 15, 0.85)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: '#fff',
+              padding: '8px 12px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              fontFamily: 'inherit',
+              textTransform: 'uppercase',
+              cursor: 'crosshair',
+              letterSpacing: '0.05em',
+            }}
+          >
+            FULLSCREEN
+          </button>
+        )}
       </div>
     );
   }
@@ -131,16 +149,20 @@ export default function FilterPanel() {
   return (
     <div style={{
       position: 'fixed',
-      top: '20px',
-      left: '20px',
+      top: isMobile ? 0 : '20px',
+      left: isMobile ? 0 : '20px',
+      right: isMobile ? 0 : 'auto',
+      bottom: isMobile ? 0 : 'auto',
       zIndex: 50,
-      background: 'rgba(10, 10, 15, 0.85)',
+      background: 'rgba(10, 10, 15, 0.95)',
       backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      padding: '16px',
+      border: isMobile ? 'none' : '1px solid rgba(255,255,255,0.08)',
+      padding: isMobile ? '16px 16px 80px' : '16px',
       fontFamily: 'inherit',
       color: '#fff',
-      minWidth: '240px',
+      minWidth: isMobile ? undefined : '240px',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
         <button
@@ -149,8 +171,8 @@ export default function FilterPanel() {
             background: 'none',
             border: '1px solid rgba(255,255,255,0.15)',
             color: '#666',
-            padding: '3px 8px',
-            fontSize: '9px',
+            padding: isMobile ? '6px 12px' : '3px 8px',
+            fontSize: isMobile ? '10px' : '9px',
             fontWeight: 'bold',
             fontFamily: 'inherit',
             textTransform: 'uppercase',
@@ -158,30 +180,32 @@ export default function FilterPanel() {
             letterSpacing: '0.05em',
           }}
         >
-          MINIMIZE
+          {isMobile ? 'CLOSE' : 'MINIMIZE'}
         </button>
-        <button
-          onClick={toggleFullscreen}
-          style={{
-            background: 'none',
-            border: '1px solid rgba(255,255,255,0.15)',
-            color: '#666',
-            padding: '3px 8px',
-            fontSize: '9px',
-            fontWeight: 'bold',
-            fontFamily: 'inherit',
-            textTransform: 'uppercase',
-            cursor: 'crosshair',
-            letterSpacing: '0.05em',
-          }}
-        >
-          FULLSCREEN
-        </button>
+        {!isMobile && (
+          <button
+            onClick={toggleFullscreen}
+            style={{
+              background: 'none',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#666',
+              padding: '3px 8px',
+              fontSize: '9px',
+              fontWeight: 'bold',
+              fontFamily: 'inherit',
+              textTransform: 'uppercase',
+              cursor: 'crosshair',
+              letterSpacing: '0.05em',
+            }}
+          >
+            FULLSCREEN
+          </button>
+        )}
       </div>
 
       <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>VIEW</span>
-        <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', marginRight: '4px', marginBottom: '4px' }}>
             <button
               onClick={() => setFilter('sortBy', 'newest')}
@@ -190,7 +214,7 @@ export default function FilterPanel() {
                 border: `1px solid ${filters.sortBy === 'newest' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
                 borderRight: 'none',
                 color: filters.sortBy === 'newest' ? '#fff' : '#555',
-                padding: '4px 8px',
+                padding: '6px 10px',
                 fontSize: '10px',
                 fontWeight: 'bold',
                 fontFamily: 'inherit',
@@ -216,7 +240,7 @@ export default function FilterPanel() {
                 background: filters.sortBy === 'newest' ? 'rgba(255,255,255,0.15)' : 'transparent',
                 border: `1px solid ${filters.sortBy === 'newest' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
                 color: filters.sortBy === 'newest' ? '#fff' : '#555',
-                padding: '4px 6px',
+                padding: '6px',
                 fontSize: '10px',
                 fontWeight: 'bold',
                 fontFamily: 'inherit',
@@ -243,7 +267,7 @@ export default function FilterPanel() {
 
       <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>TYPE</span>
-        <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
           {STANDARDS.map((s) => (
             <ToggleButton
               key={s}
@@ -257,7 +281,7 @@ export default function FilterPanel() {
 
       <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>MEDIA</span>
-        <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
           {MEDIA_TYPES.map((m) => (
             <ToggleButton
               key={m}
@@ -271,7 +295,7 @@ export default function FilterPanel() {
 
       <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>LAYOUT</span>
-        <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
           {SORT_OPTIONS.map((opt) => (
             <ToggleButton
               key={opt.value}
@@ -345,7 +369,7 @@ export default function FilterPanel() {
             background: 'transparent',
             border: '1px solid rgba(255,255,255,0.1)',
             color: '#fff',
-            padding: '6px 8px',
+            padding: '8px',
             fontSize: '11px',
             fontFamily: 'inherit',
             fontWeight: 'bold',

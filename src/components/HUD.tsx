@@ -23,13 +23,15 @@ export default function HUD() {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '20px',
-      left: '20px',
-      right: '20px',
+      bottom: '10px',
+      left: '10px',
+      right: '10px',
       zIndex: 50,
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-end',
+      flexWrap: 'wrap',
+      gap: '6px',
       fontFamily: 'inherit',
       color: '#fff',
       pointerEvents: 'none',
@@ -38,29 +40,29 @@ export default function HUD() {
         background: 'rgba(10, 10, 15, 0.75)',
         backdropFilter: 'blur(8px)',
         border: '1px solid rgba(255,255,255,0.06)',
-        padding: '10px 16px',
+        padding: '8px 12px',
         fontSize: '10px',
         fontWeight: 'bold',
         textTransform: 'uppercase',
         letterSpacing: '0.08em',
       }}>
         {evmAddress && <span style={{ color: '#666' }}>{truncate(evmAddress)}</span>}
-        <span style={{ margin: '0 12px', color: '#333' }}>|</span>
-        <span>{isLoading ? 'LOADING...' : `${filteredCount} / ${tokens.length} TOKENS`}</span>
+        <span style={{ margin: '0 8px', color: '#333' }}>|</span>
+        <span>{isLoading ? 'LOADING...' : `${filteredCount} / ${tokens.length}`}</span>
       </div>
 
       <div style={{
         background: 'rgba(10, 10, 15, 0.75)',
         backdropFilter: 'blur(8px)',
         border: '1px solid rgba(255,255,255,0.06)',
-        padding: '10px 16px',
+        padding: '8px 12px',
         fontSize: '10px',
         fontWeight: 'bold',
         textTransform: 'uppercase',
         letterSpacing: '0.08em',
       }}>
         <span style={{ color: chain.color }}>
-          {chain.name}: {tokens.length}
+          {filters.sortBy === 'newest' ? 'ALL CHAINS' : chain.name}: {tokens.length}
         </span>
       </div>
     </div>

@@ -17,6 +17,14 @@ body {
   cursor: crosshair;
 }
 
+canvas {
+  touch-action: none;
+}
+
+input[type="range"] {
+  touch-action: none;
+}
+
 ::selection {
   background: #228B22;
   color: #fff;
