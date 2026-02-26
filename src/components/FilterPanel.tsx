@@ -295,7 +295,7 @@ export default function FilterPanel() {
           {SORT_OPTIONS.map((opt) => (
             <ToggleButton
               key={opt.value}
-              active={filters.sortBy === opt.value}
+              active={opt.value === 'grid' ? (filters.sortBy === 'grid' || filters.sortBy === 'newest') : filters.sortBy === opt.value}
               label={opt.label}
               onClick={() => setFilter('sortBy', opt.value as typeof filters.sortBy)}
             />
