@@ -49,9 +49,9 @@ export default function Scene() {
     el.appendChild(renderer.domElement);
 
     const camera = new THREE.PerspectiveCamera(
-      60, window.innerWidth / window.innerHeight, 0.1, 1000
+      60, window.innerWidth / window.innerHeight, 0.1, 2000
     );
-    camera.position.set(0, 0, 40);
+    camera.position.set(0, 0, 80);
 
     const scene = new THREE.Scene();
 
@@ -59,7 +59,7 @@ export default function Scene() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 5;
-    controls.maxDistance = 150;
+    controls.maxDistance = 500;
     controls.panSpeed = 0.8;
     controls.rotateSpeed = 0.5;
 
@@ -89,12 +89,10 @@ export default function Scene() {
     mesh.frustumCulled = false;
     scene.add(mesh);
 
-    // UV attribute
     const uvData = new Float32Array(MAX * 2);
     const uvAttr = new THREE.InstancedBufferAttribute(uvData, 2);
     geo.setAttribute('aUV', uvAttr);
 
-    // State
     const curr = new Float32Array(MAX * 3);
     const tgt = new Float32Array(MAX * 3);
     let settled = true;
@@ -114,7 +112,6 @@ export default function Scene() {
       const count = positioned.length;
       const buf = mesh.instanceMatrix.array as Float32Array;
 
-      // Cancel any in-flight image loads
       loadCancel = true;
       setTimeout(() => { loadCancel = false; startImageLoads(positioned, count); }, 0);
 
@@ -138,13 +135,11 @@ export default function Scene() {
           buf[b + 12] = pos[0]; buf[b + 13] = pos[1]; buf[b + 14] = pos[2]; buf[b + 15] = 1;
         }
 
-        // UV offset for this tile
         const col = i % TPR;
         const row = Math.floor(i / TPR);
         uvData[i * 2] = col * TUV;
         uvData[i * 2 + 1] = 1.0 - (row + 1) * TUV;
 
-        // Paint chain color as default
         if (!loaded.has(token.id)) {
           const cc = CHAINS[token.chain as ChainKey]?.color || '#444';
           ctx.fillStyle = cc;
@@ -160,41 +155,42 @@ export default function Scene() {
       settled = false;
     }
 
+    // Concurrent image loader — 50 at a time, no delays
     function startImageLoads(tokens: UnifiedToken[], count: number) {
-      let batch = 0;
-      const BATCH = 20;
+      let nextIdx = 0;
+      let active = 0;
 
-      function next() {
-        if (loadCancel) return;
-        const start = batch * BATCH;
-        const end = Math.min(start + BATCH, count);
-        if (start >= count) return;
-
-        for (let i = start; i < end; i++) {
+      function loadNext() {
+        while (active < 50 && nextIdx < count) {
+          const i = nextIdx++;
           const token = tokens[i];
           if (loaded.has(token.id)) continue;
           const url = token.media.thumbnail || token.media.image;
           if (!url) { loaded.add(token.id); continue; }
 
+          active++;
           const img = new Image();
           img.crossOrigin = 'anonymous';
           img.onload = () => {
-            if (loadCancel) return;
-            const c = i % TPR;
-            const r = Math.floor(i / TPR);
-            ctx.drawImage(img, c * TILE, r * TILE, TILE, TILE);
+            if (!loadCancel) {
+              const c = i % TPR;
+              const r = Math.floor(i / TPR);
+              ctx.drawImage(img, c * TILE, r * TILE, TILE, TILE);
+              atlasDirty = true;
+            }
             loaded.add(token.id);
-            atlasDirty = true;
+            active--;
+            loadNext();
           };
-          img.onerror = () => { loaded.add(token.id); };
+          img.onerror = () => {
+            loaded.add(token.id);
+            active--;
+            loadNext();
+          };
           img.src = url;
         }
-
-        batch++;
-        if (end < count) setTimeout(next, 100);
       }
-
-      next();
+      loadNext();
     }
 
     const unsub = useStore.subscribe((state) => {
@@ -206,11 +202,21 @@ export default function Scene() {
     });
     rebuild();
 
-    // Click
+    // Click — track drag to differentiate from orbit
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    let downX = 0, downY = 0;
 
-    function onClick(e: MouseEvent) {
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      downX = e.clientX;
+      downY = e.clientY;
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      const dx = e.clientX - downX;
+      const dy = e.clientY - downY;
+      if (dx * dx + dy * dy > 9) return;
+
       pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
       pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
@@ -219,8 +225,7 @@ export default function Scene() {
         const token = tokenList[hits[0].instanceId];
         if (token) useStore.getState().setSelectedToken(token);
       }
-    }
-    renderer.domElement.addEventListener('click', onClick);
+    });
 
     function onResize() {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -229,7 +234,6 @@ export default function Scene() {
     }
     window.addEventListener('resize', onResize);
 
-    // Render loop
     let raf: number;
     let last = performance.now();
 
@@ -241,7 +245,6 @@ export default function Scene() {
 
       controls.update();
 
-      // Batch atlas upload: max once per frame
       if (atlasDirty) {
         atlasTex.needsUpdate = true;
         atlasDirty = false;
@@ -280,7 +283,6 @@ export default function Scene() {
       cancelAnimationFrame(raf);
       unsub();
       window.removeEventListener('resize', onResize);
-      renderer.domElement.removeEventListener('click', onClick);
       controls.dispose();
       geo.dispose();
       shaderMat.dispose();

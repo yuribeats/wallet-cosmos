@@ -1,7 +1,7 @@
 import type { UnifiedToken, FilterState } from './types';
 import { CHAIN_KEYS, type ChainKey } from './constants';
 
-const BASE_SPREAD = 20;
+const BASE_SPREAD = 40;
 
 function sphericalToCartesian(
   radius: number,
