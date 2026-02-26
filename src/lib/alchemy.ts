@@ -22,53 +22,58 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string): Promis
   let pageKey: string | undefined;
 
   do {
-    let response;
+    let nfts: Array<Record<string, unknown>> = [];
+    let nextPageKey: string | undefined;
+
     try {
-      response = await client.nft.getNftsForOwner(wallet, {
+      const response = await client.nft.getNftsForOwner(wallet, {
         excludeFilters: [NftFilters.SPAM],
         pageKey,
         pageSize: 100,
       });
+      nfts = response.ownedNfts as unknown as Array<Record<string, unknown>>;
+      nextPageKey = response.pageKey;
     } catch {
       try {
-        response = await client.nft.getNftsForOwner(wallet, {
+        const fallback = await client.nft.getNftsForOwner(wallet, {
           excludeFilters: [NftFilters.SPAM],
           pageKey,
           pageSize: 100,
           omitMetadata: true,
         });
+        nfts = fallback.ownedNfts as unknown as Array<Record<string, unknown>>;
+        nextPageKey = fallback.pageKey;
       } catch {
         break;
       }
     }
 
-    for (const nft of response.ownedNfts) {
-      const media = resolveMedia(
-        nft.raw?.metadata as Record<string, unknown> | undefined,
-        nft.image
-      );
+    for (const nft of nfts) {
+      const raw = nft.raw as Record<string, unknown> | undefined;
+      const metadata = raw?.metadata as Record<string, unknown> | undefined;
+      const contract = nft.contract as Record<string, unknown> | undefined;
+      const image = nft.image as { cachedUrl?: string; thumbnailUrl?: string; originalUrl?: string } | undefined;
+      const media = resolveMedia(metadata, image);
 
       tokens.push({
-        id: `${chain}-${nft.contract.address}-${nft.tokenId}`,
+        id: `${chain}-${contract?.address || ''}-${nft.tokenId || ''}`,
         chain,
-        contractAddress: nft.contract.address,
-        tokenId: nft.tokenId,
+        contractAddress: (contract?.address as string) || '',
+        tokenId: nft.tokenId as string | undefined,
         standard: nft.tokenType === 'ERC1155' ? 'ERC1155' : 'ERC721',
-        name: nft.name || nft.contract.name || `Token ${nft.tokenId}`,
-        description: nft.description || undefined,
-        creator: nft.contract.contractDeployer || undefined,
-        collectionName: nft.contract.name || undefined,
+        name: (nft.name as string) || (contract?.name as string) || `Token ${nft.tokenId || ''}`,
+        description: (nft.description as string) || undefined,
+        creator: (contract?.contractDeployer as string) || undefined,
+        collectionName: (contract?.name as string) || undefined,
         media,
-        balance: nft.balance,
-        attributes: (nft.raw?.metadata as Record<string, unknown>)?.attributes as
-          | Array<{ trait_type: string; value: string }>
-          | undefined,
-        rawMetadata: nft.raw?.metadata as Record<string, unknown> | undefined,
-        lastUpdated: nft.timeLastUpdated,
+        balance: nft.balance as string | undefined,
+        attributes: metadata?.attributes as Array<{ trait_type: string; value: string }> | undefined,
+        rawMetadata: metadata,
+        lastUpdated: nft.timeLastUpdated as string | undefined,
       });
     }
 
-    pageKey = response.pageKey;
+    pageKey = nextPageKey;
   } while (pageKey);
 
   return tokens;
