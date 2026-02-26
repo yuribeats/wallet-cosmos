@@ -32,13 +32,6 @@ export interface WalletConnection {
   tokenTypes: string[];
 }
 
-export interface SenderInfo {
-  address: string;
-  ensName?: string;
-  transferCount: number;
-  contractAddresses: string[];
-}
-
 export type FilterState = {
   standards: string[];
   mediaTypes: string[];
@@ -46,6 +39,5 @@ export type FilterState = {
   sortDirection: 'asc' | 'desc';
   searchQuery: string;
   selectedCreator?: string;
-  selectedSender?: string;
   density: number;
 };

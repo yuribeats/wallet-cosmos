@@ -10,11 +10,10 @@ import ConnectionLines from './ConnectionLines';
 export default function Scene() {
   const tokens = useStore((s) => s.tokens);
   const filters = useStore((s) => s.filters);
-  const senders = useStore((s) => s.senders);
   const connections = useStore((s) => s.connections);
   const setSelectedToken = useStore((s) => s.setSelectedToken);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
-  const filteredTokens = useMemo(() => getFilteredTokens(), [tokens, filters, senders, getFilteredTokens]);
+  const filteredTokens = useMemo(() => getFilteredTokens(), [tokens, filters, getFilteredTokens]);
 
   return (
     <Canvas

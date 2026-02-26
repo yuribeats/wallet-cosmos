@@ -16,8 +16,7 @@ export default function HUD() {
   const activeChain = useStore((s) => s.activeChain);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
   const filters = useStore((s) => s.filters);
-  const senders = useStore((s) => s.senders);
-  const filteredCount = useMemo(() => getFilteredTokens().length, [tokens, filters, senders, getFilteredTokens]);
+  const filteredCount = useMemo(() => getFilteredTokens().length, [tokens, filters, getFilteredTokens]);
 
   const chain = CHAINS[activeChain];
 

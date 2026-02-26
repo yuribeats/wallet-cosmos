@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { UnifiedToken, WalletConnection, FilterState, SenderInfo } from '@/lib/types';
+import type { UnifiedToken, WalletConnection, FilterState } from '@/lib/types';
 import type { ChainKey } from '@/lib/constants';
 
 interface WalletStore {
@@ -17,7 +17,6 @@ interface WalletStore {
   walletLoaded: boolean;
 
   activeChain: ChainKey;
-  senders: SenderInfo[];
 
   setTokens: (tokens: UnifiedToken[]) => void;
   appendTokens: (tokens: UnifiedToken[]) => void;
@@ -29,7 +28,6 @@ interface WalletStore {
   setError: (error: string | null) => void;
   loadWallet: (evm: string) => void;
   setActiveChain: (chain: ChainKey) => void;
-  setSenders: (senders: SenderInfo[]) => void;
   getFilteredTokens: () => UnifiedToken[];
 }
 
@@ -53,7 +51,6 @@ export const useStore = create<WalletStore>((set, get) => ({
   walletLoaded: false,
 
   activeChain: 'ethereum',
-  senders: [],
 
   setTokens: (tokens) => set({ tokens }),
   appendTokens: (tokens) => set((s) => ({ tokens: [...s.tokens, ...tokens] })),
@@ -65,22 +62,18 @@ export const useStore = create<WalletStore>((set, get) => ({
   setLoadProgress: (progress) => set({ loadProgress: progress }),
   setError: (error) => set({ error }),
   loadWallet: (evm) =>
-    set({ evmAddress: evm, walletLoaded: true, tokens: [], connections: [], senders: [], error: null, selectedToken: null, loadProgress: 0, filters: { ...get().filters, selectedSender: undefined } }),
+    set({ evmAddress: evm, walletLoaded: true, tokens: [], connections: [], error: null, selectedToken: null, loadProgress: 0 }),
 
   setActiveChain: (chain) =>
-    set((s) => ({
+    set({
       activeChain: chain,
       tokens: [],
-      senders: [],
       loadProgress: 0,
       selectedToken: null,
-      filters: { ...s.filters, selectedSender: undefined },
-    })),
-
-  setSenders: (senders) => set({ senders }),
+    }),
 
   getFilteredTokens: () => {
-    const { tokens, filters, senders } = get();
+    const { tokens, filters } = get();
     let filtered = tokens;
 
     filtered = filtered.filter((t) => filters.standards.includes(t.standard));
@@ -88,14 +81,6 @@ export const useStore = create<WalletStore>((set, get) => ({
 
     if (filters.selectedCreator) {
       filtered = filtered.filter((t) => t.creator === filters.selectedCreator);
-    }
-
-    if (filters.selectedSender) {
-      const sender = senders.find((s) => s.address === filters.selectedSender);
-      if (sender) {
-        const contracts = new Set(sender.contractAddresses.map((a) => a.toLowerCase()));
-        filtered = filtered.filter((t) => contracts.has(t.contractAddress.toLowerCase()));
-      }
     }
 
     if (filters.searchQuery) {

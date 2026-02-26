@@ -8,7 +8,6 @@ export function useWalletData() {
   const walletLoaded = useStore((s) => s.walletLoaded);
   const activeChain = useStore((s) => s.activeChain);
   const setTokens = useStore((s) => s.setTokens);
-  const setSenders = useStore((s) => s.setSenders);
   const setConnections = useStore((s) => s.setConnections);
   const setLoading = useStore((s) => s.setLoading);
   const setLoadProgress = useStore((s) => s.setLoadProgress);
@@ -43,14 +42,6 @@ export function useWalletData() {
 
       if (cancelled) return;
 
-      fetch(`/api/senders?${new URLSearchParams({ wallet: evmAddress, chain: activeChain })}`)
-        .then((r) => r.json())
-        .then((d) => {
-          console.log('Senders response:', d);
-          if (!cancelled && d.senders) setSenders(d.senders);
-        })
-        .catch((err) => console.error('Senders fetch failed:', err));
-
       fetch(`/api/transfers?${new URLSearchParams({ wallet: evmAddress })}`)
         .then((r) => r.json())
         .then((d) => {
@@ -61,5 +52,5 @@ export function useWalletData() {
 
     load();
     return () => { cancelled = true; };
-  }, [evmAddress, walletLoaded, activeChain, setTokens, setSenders, setConnections, setLoading, setLoadProgress, setError]);
+  }, [evmAddress, walletLoaded, activeChain, setTokens, setConnections, setLoading, setLoadProgress, setError]);
 }
