@@ -1,8 +1,7 @@
 'use client';
 
-import { useRef, useMemo, useCallback } from 'react';
+import { useRef, useMemo, useCallback, useEffect } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { UnifiedToken } from '@/lib/types';
 import { computePositions } from '@/lib/layoutEngine';
@@ -22,7 +21,6 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
   const density = useStore((s) => s.filters.density);
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const hoveredRef = useRef<number | null>(null);
-  const hoveredTokenRef = useRef<UnifiedToken | null>(null);
   const currentPositions = useRef<Float32Array | null>(null);
 
   const positionedTokens = useMemo(
@@ -53,13 +51,30 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
     return arr;
   }, [positionedTokens]);
 
-  useFrame(() => {
+  useEffect(() => {
     const mesh = meshRef.current;
     if (!mesh || positionedTokens.length === 0) return;
 
-    if (!currentPositions.current || currentPositions.current.length !== targetPositions.length) {
-      currentPositions.current = new Float32Array(targetPositions);
+    currentPositions.current = new Float32Array(targetPositions);
+
+    for (let i = 0; i < positionedTokens.length; i++) {
+      const i3 = i * 3;
+      dummy.position.set(targetPositions[i3], targetPositions[i3 + 1], targetPositions[i3 + 2]);
+      dummy.scale.setScalar(0.8);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+
+      tmpColor.setRGB(chainColors[i3], chainColors[i3 + 1], chainColors[i3 + 2]);
+      mesh.setColorAt(i, tmpColor);
     }
+
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [positionedTokens, targetPositions, chainColors]);
+
+  useFrame(() => {
+    const mesh = meshRef.current;
+    if (!mesh || positionedTokens.length === 0 || !currentPositions.current) return;
 
     const cur = currentPositions.current;
     const t = Date.now() * 0.001;
@@ -77,30 +92,12 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
       dummy.scale.setScalar(scale);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
-
-      tmpColor.setRGB(chainColors[i3], chainColors[i3 + 1], chainColors[i3 + 2]);
-      mesh.setColorAt(i, tmpColor);
     }
 
     mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
 
   const { raycaster, camera, pointer } = useThree();
-
-  const handlePointerMove = useCallback((e: ThreeEvent<PointerEvent>) => {
-    if (!meshRef.current) return;
-    e.stopPropagation();
-    raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObject(meshRef.current);
-    if (hits.length > 0 && hits[0].instanceId !== undefined) {
-      hoveredRef.current = hits[0].instanceId;
-      hoveredTokenRef.current = positionedTokens[hits[0].instanceId] || null;
-    } else {
-      hoveredRef.current = null;
-      hoveredTokenRef.current = null;
-    }
-  }, [positionedTokens, raycaster, camera, pointer]);
 
   const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     if (!meshRef.current) return;
@@ -113,24 +110,18 @@ export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
     }
   }, [positionedTokens, onSelect, raycaster, camera, pointer]);
 
-  const handlePointerOut = useCallback(() => {
-    hoveredRef.current = null;
-    hoveredTokenRef.current = null;
-  }, []);
-
   if (positionedTokens.length === 0) return null;
 
   return (
     <instancedMesh
       ref={meshRef}
       args={[undefined, undefined, positionedTokens.length]}
-      onPointerMove={handlePointerMove}
       onClick={handleClick}
-      onPointerOut={handlePointerOut}
+      frustumCulled={false}
     >
       <planeGeometry args={[1, 1]} />
       <meshBasicMaterial
-        vertexColors
+        color="#ffffff"
         side={THREE.DoubleSide}
         transparent
         opacity={0.85}
