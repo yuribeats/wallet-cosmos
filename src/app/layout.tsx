@@ -3,7 +3,7 @@ import { GeistPixelSquare } from "geist/font/pixel";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "WALLET COSMOS",
+  title: "3D WALLET EXPLORER",
   description: "3D WALLET EXPLORER",
 };
 
