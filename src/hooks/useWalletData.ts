@@ -26,25 +26,18 @@ export function useWalletData() {
       try {
         const fetches: Promise<void>[] = [];
 
-        // Fetch EVM tokens
         if (evmAddress) {
           const evmParams = new URLSearchParams({ wallet: evmAddress });
           fetches.push(
-            Promise.all([
-              fetch(`/api/nfts?${evmParams}`),
-              fetch(`/api/tokens?${evmParams}`),
-            ]).then(async ([nftRes, tokenRes]) => {
-              if (cancelled) return;
-              const nftData = await nftRes.json();
-              const tokenData = await tokenRes.json();
-              if (!nftRes.ok) throw new Error(nftData.error || 'Failed to fetch EVM NFTs');
-              if (!tokenRes.ok) throw new Error(tokenData.error || 'Failed to fetch EVM tokens');
-              const evmTokens = [...(nftData.tokens || []), ...(tokenData.tokens || [])];
-              if (!cancelled) setTokens(evmTokens);
-            })
+            fetch(`/api/nfts?${evmParams}`)
+              .then(async (res) => {
+                if (cancelled) return;
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to fetch EVM NFTs');
+                if (!cancelled) setTokens(data.tokens || []);
+              })
           );
 
-          // Fetch connections in background (EVM only)
           fetch(`/api/transfers?${new URLSearchParams({ wallet: evmAddress })}`)
             .then((r) => r.json())
             .then((data) => {
@@ -53,7 +46,6 @@ export function useWalletData() {
             .catch(() => {});
         }
 
-        // Fetch Solana tokens
         if (solanaAddress) {
           const solParams = new URLSearchParams({ wallet: solanaAddress });
           fetches.push(
@@ -61,7 +53,7 @@ export function useWalletData() {
               .then(async (res) => {
                 if (cancelled) return;
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Failed to fetch Solana assets');
+                if (!res.ok) throw new Error(data.error || 'Failed to fetch Solana NFTs');
                 if (!cancelled && data.tokens?.length) {
                   if (evmAddress) {
                     appendTokens(data.tokens);

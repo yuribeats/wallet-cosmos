@@ -1,12 +1,13 @@
 'use client';
 
 import { useStore } from '@/hooks/useStore';
-import { CHAINS, CHAIN_KEYS, type ChainKey } from '@/lib/constants';
+import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
 
-const STANDARDS = ['ERC721', 'ERC1155', 'ERC20'];
+const STANDARDS = ['ERC721', 'ERC1155'];
 const MEDIA_TYPES = ['image', 'video', 'audio', 'text', 'html'];
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'chain', label: 'CHAIN' },
+  { value: 'grid', label: 'GRID' },
   { value: 'creator', label: 'CREATOR' },
   { value: 'mediaType', label: 'MEDIA' },
   { value: 'date', label: 'DATE' },
@@ -128,7 +129,7 @@ export default function FilterPanel() {
       </div>
 
       <div style={rowStyle}>
-        <span style={labelStyle}>SORT BY</span>
+        <span style={labelStyle}>LAYOUT</span>
         <div>
           {SORT_OPTIONS.map((opt) => (
             <ToggleButton
@@ -138,6 +139,31 @@ export default function FilterPanel() {
               onClick={() => setFilter('sortBy', opt.value as typeof filters.sortBy)}
             />
           ))}
+        </div>
+      </div>
+
+      <div style={rowStyle}>
+        <span style={labelStyle}>DENSITY</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '9px', color: '#555' }}>TIGHT</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={filters.density * 100}
+            onChange={(e) => setFilter('density', Number(e.target.value) / 100)}
+            style={{
+              flex: 1,
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              height: '2px',
+              background: 'rgba(255,255,255,0.2)',
+              outline: 'none',
+              cursor: 'crosshair',
+              accentColor: '#fff',
+            }}
+          />
+          <span style={{ fontSize: '9px', color: '#555' }}>SPREAD</span>
         </div>
       </div>
 

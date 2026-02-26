@@ -7,17 +7,13 @@ export async function GET(request: NextRequest) {
   const wallet = request.nextUrl.searchParams.get('wallet') || undefined;
 
   try {
-    const tokens = [];
-
     if (wallet && isSolanaAddress(wallet)) {
-      const solTokens = await fetchSolanaAssets(wallet);
-      tokens.push(...solTokens.filter((t) => t.standard !== 'ERC20'));
-    } else {
-      const nfts = await fetchAllNfts(wallet, chain || undefined);
-      tokens.push(...nfts);
+      const tokens = await fetchSolanaAssets(wallet);
+      return NextResponse.json({ tokens, count: tokens.length });
     }
 
-    return NextResponse.json({ tokens, count: tokens.length });
+    const nfts = await fetchAllNfts(wallet, chain || undefined);
+    return NextResponse.json({ tokens: nfts, count: nfts.length });
   } catch (error) {
     console.error('NFT fetch error:', error);
     return NextResponse.json(

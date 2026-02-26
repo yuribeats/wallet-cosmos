@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useMemo } from 'react';
-import { useFrame, useLoader } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { UnifiedToken } from '@/lib/types';
@@ -20,10 +20,7 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
   const targetVec = useMemo(() => new THREE.Vector3(...targetPosition), [targetPosition]);
 
   const chainColor = CHAINS[token.chain as ChainKey]?.color || '#ffffff';
-  const isErc20 = token.standard === 'ERC20';
-  const size = isErc20 ? 0.4 : 0.8;
 
-  // Load texture if image available
   const texture = useMemo(() => {
     const url = token.media.thumbnail || token.media.image;
     if (!url) return null;
@@ -39,15 +36,12 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
   useFrame(() => {
     if (!meshRef.current) return;
 
-    // Lerp to target position
     currentPos.current.lerp(targetVec, 0.04);
     meshRef.current.position.copy(currentPos.current);
 
-    // Floating animation
     meshRef.current.position.y += Math.sin(Date.now() * 0.001 + currentPos.current.x) * 0.05;
 
-    // Scale on hover
-    const targetScale = hovered ? size * 1.3 : size;
+    const targetScale = hovered ? 1.04 : 0.8;
     meshRef.current.scale.lerp(
       new THREE.Vector3(targetScale, targetScale, targetScale),
       0.1
@@ -62,11 +56,7 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
       onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
       onPointerOut={() => setHovered(false)}
     >
-      {isErc20 ? (
-        <sphereGeometry args={[0.5, 16, 16]} />
-      ) : (
-        <planeGeometry args={[1, 1]} />
-      )}
+      <planeGeometry args={[1, 1]} />
 
       {texture ? (
         <meshBasicMaterial
@@ -85,18 +75,15 @@ export default function TokenNode({ token, targetPosition, onSelect }: TokenNode
         />
       )}
 
-      {/* Chain color ring */}
-      {!isErc20 && (
-        <mesh position={[0, 0, -0.01]}>
-          <ringGeometry args={[0.52, 0.58, 32]} />
-          <meshBasicMaterial
-            color={chainColor}
-            transparent
-            opacity={hovered ? 0.7 : 0.25}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      )}
+      <mesh position={[0, 0, -0.01]}>
+        <ringGeometry args={[0.52, 0.58, 32]} />
+        <meshBasicMaterial
+          color={chainColor}
+          transparent
+          opacity={hovered ? 0.7 : 0.25}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
 
       {hovered && (
         <Html

@@ -3,7 +3,7 @@ export interface UnifiedToken {
   chain: 'ethereum' | 'base' | 'optimism' | 'zora' | 'solana';
   contractAddress: string;
   tokenId?: string;
-  standard: 'ERC721' | 'ERC1155' | 'ERC20';
+  standard: 'ERC721' | 'ERC1155';
   name: string;
   description?: string;
   creator?: string;
@@ -18,13 +18,9 @@ export interface UnifiedToken {
   };
 
   balance?: string;
-  symbol?: string;
-  decimals?: number;
   attributes?: Array<{ trait_type: string; value: string }>;
   rawMetadata?: Record<string, unknown>;
   lastUpdated?: string;
-
-  logo?: string;
 
   position?: [number, number, number];
 }
@@ -40,8 +36,9 @@ export type FilterState = {
   chains: string[];
   standards: string[];
   mediaTypes: string[];
-  sortBy: 'date' | 'creator' | 'mediaType' | 'tokenType' | 'chain';
+  sortBy: 'date' | 'creator' | 'mediaType' | 'tokenType' | 'chain' | 'grid';
   sortDirection: 'asc' | 'desc';
   searchQuery: string;
   selectedCreator?: string;
+  density: number;
 };

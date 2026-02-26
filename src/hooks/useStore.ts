@@ -32,11 +32,12 @@ export const useStore = create<WalletStore>((set, get) => ({
   connections: [],
   filters: {
     chains: [...CHAIN_KEYS],
-    standards: ['ERC721', 'ERC1155', 'ERC20'],
+    standards: ['ERC721', 'ERC1155'],
     mediaTypes: ['image', 'video', 'audio', 'text', 'html', 'unknown'],
     sortBy: 'chain',
     sortDirection: 'desc',
     searchQuery: '',
+    density: 1.0,
   },
   selectedToken: null,
   isLoading: false,

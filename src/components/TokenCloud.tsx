@@ -13,10 +13,11 @@ interface TokenCloudProps {
 
 export default function TokenCloud({ tokens, onSelect }: TokenCloudProps) {
   const sortBy = useStore((s) => s.filters.sortBy);
+  const density = useStore((s) => s.filters.density);
 
   const positionedTokens = useMemo(
-    () => computePositions(tokens, sortBy),
-    [tokens, sortBy]
+    () => computePositions(tokens, sortBy, density),
+    [tokens, sortBy, density]
   );
 
   return (

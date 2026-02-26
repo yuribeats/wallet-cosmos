@@ -79,12 +79,6 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
         {token.tokenId && (
           <div><span style={{ color: '#666' }}>TOKEN ID:</span> {token.tokenId}</div>
         )}
-        {token.balance && token.standard === 'ERC20' && token.decimals !== undefined && (
-          <div>
-            <span style={{ color: '#666' }}>BALANCE:</span>{' '}
-            {(Number(BigInt(token.balance)) / Math.pow(10, token.decimals)).toFixed(4)} {token.symbol}
-          </div>
-        )}
       </div>
 
       {token.description && (
