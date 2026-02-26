@@ -1,14 +1,22 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import { useState, useEffect, useMemo } from 'react';
 import { useWalletData } from '@/hooks/useWalletData';
 import { useStore } from '@/hooks/useStore';
 import FilterPanel from '@/components/FilterPanel';
 import TokenDetail from '@/components/TokenDetail';
 import HUD from '@/components/HUD';
 import WalletInput from '@/components/WalletInput';
+import TokenGrid from '@/components/TokenGrid';
 
-const Scene = dynamic(() => import('@/components/Scene'), { ssr: false });
+function hasWebGL(): boolean {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
 
 export default function Home() {
   useWalletData();
@@ -19,6 +27,24 @@ export default function Home() {
   const isLoading = useStore((s) => s.isLoading);
   const loadProgress = useStore((s) => s.loadProgress);
   const error = useStore((s) => s.error);
+  const tokens = useStore((s) => s.tokens);
+  const filters = useStore((s) => s.filters);
+  const getFilteredTokens = useStore((s) => s.getFilteredTokens);
+
+  const filteredTokens = useMemo(() => getFilteredTokens(), [tokens, filters, getFilteredTokens]);
+
+  const [webgl, setWebgl] = useState<boolean | null>(null);
+  const [SceneComponent, setSceneComponent] = useState<React.ComponentType | null>(null);
+
+  useEffect(() => {
+    const supported = hasWebGL();
+    setWebgl(supported);
+    if (supported) {
+      import('@/components/Scene')
+        .then((mod) => setSceneComponent(() => mod.default))
+        .catch(() => setWebgl(false));
+    }
+  }, []);
 
   if (!walletLoaded) {
     return <WalletInput />;
@@ -26,7 +52,11 @@ export default function Home() {
 
   return (
     <main style={{ width: '100vw', height: '100vh', position: 'relative', cursor: 'crosshair' }}>
-      <Scene />
+      {webgl && SceneComponent ? (
+        <SceneComponent />
+      ) : (
+        <TokenGrid tokens={filteredTokens} onSelect={setSelectedToken} />
+      )}
 
       {isLoading && (
         <div style={{

@@ -13,6 +13,8 @@ interface TokenCloudProps {
   onSelect: (token: UnifiedToken) => void;
 }
 
+const loader = new THREE.TextureLoader();
+
 function TokenNode({ token, targetPosition, onSelect }: {
   token: UnifiedToken;
   targetPosition: [number, number, number];
@@ -20,6 +22,18 @@ function TokenNode({ token, targetPosition, onSelect }: {
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const chainColor = CHAINS[token.chain as ChainKey]?.color || '#ffffff';
+
+  const texture = useMemo(() => {
+    const url = token.media.thumbnail || token.media.image;
+    if (!url) return null;
+    try {
+      const tex = loader.load(url);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    } catch {
+      return null;
+    }
+  }, [token.media.thumbnail, token.media.image]);
 
   useFrame(() => {
     if (!meshRef.current) return;
@@ -36,12 +50,21 @@ function TokenNode({ token, targetPosition, onSelect }: {
       onClick={(e) => { e.stopPropagation(); onSelect(token); }}
     >
       <planeGeometry args={[0.8, 0.8]} />
-      <meshBasicMaterial
-        color={chainColor}
-        side={THREE.DoubleSide}
-        transparent
-        opacity={0.85}
-      />
+      {texture ? (
+        <meshBasicMaterial
+          map={texture}
+          side={THREE.DoubleSide}
+          transparent
+          opacity={0.9}
+        />
+      ) : (
+        <meshBasicMaterial
+          color={chainColor}
+          side={THREE.DoubleSide}
+          transparent
+          opacity={0.85}
+        />
+      )}
     </mesh>
   );
 }
