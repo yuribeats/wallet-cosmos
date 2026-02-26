@@ -272,9 +272,9 @@ export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey, limi
   return tokens;
 }
 
-export async function fetchNewestNfts(wallet?: string, limit: number = 100): Promise<UnifiedToken[]> {
+export async function fetchNewestNfts(wallet?: string, limit: number = 100, chain: ChainKey = 'base'): Promise<UnifiedToken[]> {
   const addr = wallet || DEFAULT_WALLET;
-  const results = await Promise.allSettled([fetchNewestForChain('base', addr, limit)]);
+  const results = await Promise.allSettled([fetchNewestForChain(chain, addr, limit)]);
 
   const tokens: UnifiedToken[] = [];
   for (const result of results) {

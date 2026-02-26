@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   try {
     if (mode === 'newest') {
-      const nfts = await fetchNewestNfts(wallet, limit || 100);
+      const nfts = await fetchNewestNfts(wallet, limit || 100, chain || undefined);
       return NextResponse.json({ tokens: nfts, count: nfts.length });
     }
 

@@ -208,7 +208,7 @@ export default function FilterPanel() {
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', marginRight: '4px', marginBottom: '4px' }}>
             <button
-              onClick={() => setFilter('sortBy', 'newest')}
+              onClick={() => setFilter('sortBy', filters.sortBy === 'newest' ? 'grid' : 'newest')}
               style={{
                 background: filters.sortBy === 'newest' ? 'rgba(255,255,255,0.15)' : 'transparent',
                 border: `1px solid ${filters.sortBy === 'newest' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
@@ -223,7 +223,7 @@ export default function FilterPanel() {
                 letterSpacing: '0.05em',
               }}
             >
-              NEWEST (BASE)
+              NEWEST
             </button>
             <input
               type="number"
@@ -253,11 +253,10 @@ export default function FilterPanel() {
           {CHAIN_KEYS.map((chain) => (
             <ToggleButton
               key={chain}
-              active={filters.sortBy !== 'newest' && activeChain === chain}
+              active={activeChain === chain}
               label={CHAINS[chain].name}
-              color={filters.sortBy !== 'newest' && activeChain === chain ? CHAINS[chain].color + '40' : undefined}
+              color={activeChain === chain ? CHAINS[chain].color + '40' : undefined}
               onClick={() => {
-                if (filters.sortBy === 'newest') setFilter('sortBy', 'grid');
                 setActiveChain(chain as ChainKey);
               }}
             />

@@ -16,7 +16,7 @@ export function useWalletData() {
   const setLoadProgress = useStore((s) => s.setLoadProgress);
   const setError = useStore((s) => s.setError);
 
-  const newestLoaded = useRef(false);
+  const newestLoaded = useRef<string | null>(null);
   const singleChainLoaded = useRef<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export function useWalletData() {
 
     const needNewest = sortBy === 'newest';
 
-    if (needNewest && newestLoaded.current) return;
+    if (needNewest && newestLoaded.current === activeChain) return;
     if (!needNewest && singleChainLoaded.current === activeChain) return;
 
     let cancelled = false;
@@ -35,18 +35,18 @@ export function useWalletData() {
       setLoadProgress(0);
 
       if (needNewest) {
-        newestLoaded.current = false;
+        newestLoaded.current = null;
         singleChainLoaded.current = null;
 
         try {
-          const res = await fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, mode: 'newest', limit: '200' })}`);
+          const res = await fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, mode: 'newest', chain: activeChain, limit: '200' })}`);
           if (cancelled) return;
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Failed to fetch newest');
           if (!cancelled) {
             setTokens(data.tokens || []);
             setLoadProgress(1);
-            newestLoaded.current = true;
+            newestLoaded.current = activeChain;
           }
         } catch (err) {
           if (!cancelled) {
@@ -54,7 +54,7 @@ export function useWalletData() {
           }
         }
       } else {
-        newestLoaded.current = false;
+        newestLoaded.current = null;
         try {
           const res = await fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, chain: activeChain })}`);
           if (cancelled) return;
