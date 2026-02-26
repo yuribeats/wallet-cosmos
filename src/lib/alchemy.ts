@@ -90,69 +90,94 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
   return limit > 0 ? tokens.slice(0, limit) : tokens;
 }
 
-async function enrichTokenDates(tokens: UnifiedToken[], chain: ChainKey, wallet: string): Promise<UnifiedToken[]> {
+function nftToToken(nft: Record<string, unknown>, chain: ChainKey, mintedAt?: string): UnifiedToken {
+  const raw = nft.raw as Record<string, unknown> | undefined;
+  const metadata = raw?.metadata as Record<string, unknown> | undefined;
+  const contract = nft.contract as Record<string, unknown> | undefined;
+  const image = nft.image as { cachedUrl?: string; thumbnailUrl?: string; originalUrl?: string } | undefined;
+  const media = resolveMedia(metadata, image);
+
+  return {
+    id: `${chain}-${contract?.address || ''}-${nft.tokenId || ''}`,
+    chain,
+    contractAddress: (contract?.address as string) || '',
+    tokenId: nft.tokenId as string | undefined,
+    standard: nft.tokenType === 'ERC1155' ? 'ERC1155' : 'ERC721',
+    name: (nft.name as string) || (contract?.name as string) || `Token ${nft.tokenId || ''}`,
+    description: (nft.description as string) || undefined,
+    creator: (contract?.contractDeployer as string) || undefined,
+    collectionName: (contract?.name as string) || undefined,
+    media,
+    balance: nft.balance as string | undefined,
+    attributes: metadata?.attributes as Array<{ trait_type: string; value: string }> | undefined,
+    rawMetadata: metadata,
+    lastUpdated: nft.timeLastUpdated as string | undefined,
+    mintedAt,
+  };
+}
+
+export async function fetchNewestForChain(chain: ChainKey, wallet: string, limit: number = 100): Promise<UnifiedToken[]> {
   const client = getClient(chain);
 
-  try {
-    const result = await client.core.getAssetTransfers({
-      toAddress: wallet,
-      category: ['erc721' as never, 'erc1155' as never],
-      order: 'desc' as never,
-      withMetadata: true,
-      maxCount: 500,
-    });
+  const result = await client.core.getAssetTransfers({
+    toAddress: wallet,
+    category: ['erc721' as never, 'erc1155' as never],
+    order: 'desc' as never,
+    withMetadata: true,
+    maxCount: limit * 2,
+  });
 
-    const dateMap = new Map<string, string>();
-    const missingBlocks = new Set<string>();
+  let latestBlock: number | null = null;
+  let now: number | null = null;
 
-    for (const t of result.transfers) {
-      const contract = t.rawContract?.address?.toLowerCase();
-      const rawId = t.erc721TokenId || t.tokenId || (t.erc1155Metadata as Array<{ tokenId: string }> | null)?.[0]?.tokenId;
-      if (!contract || !rawId) continue;
-      const decId = BigInt(rawId).toString();
-      const key = `${contract}-${decId}`;
-      if (dateMap.has(key)) continue;
+  const seen = new Set<string>();
+  const transferList: Array<{ contract: string; tokenId: string; timestamp: string }> = [];
 
-      const meta = t.metadata as { blockTimestamp?: string } | null;
-      if (meta?.blockTimestamp) {
-        dateMap.set(key, meta.blockTimestamp);
-      } else if (t.blockNum) {
-        missingBlocks.add(t.blockNum);
-        dateMap.set(key, t.blockNum);
+  for (const t of result.transfers) {
+    const contract = t.rawContract?.address?.toLowerCase();
+    const rawId = t.erc721TokenId || t.tokenId || (t.erc1155Metadata as Array<{ tokenId: string }> | null)?.[0]?.tokenId;
+    if (!contract || !rawId) continue;
+
+    const decId = BigInt(rawId).toString();
+    const key = `${contract}-${decId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const meta = t.metadata as { blockTimestamp?: string } | null;
+    let timestamp = meta?.blockTimestamp || '';
+
+    if (!timestamp && t.blockNum) {
+      if (latestBlock === null) {
+        latestBlock = await client.core.getBlockNumber();
+        now = Date.now();
       }
+      const blockNum = parseInt(t.blockNum, 16);
+      timestamp = new Date(now! - (latestBlock - blockNum) * 1000).toISOString();
     }
 
-    if (missingBlocks.size > 0) {
-      const latestBlock = await client.core.getBlockNumber();
-      const now = Date.now();
-      for (const [key, val] of dateMap) {
-        if (val.startsWith('0x')) {
-          const blockNum = parseInt(val, 16);
-          const estimatedMs = now - (latestBlock - blockNum) * 1000;
-          dateMap.set(key, new Date(estimatedMs).toISOString());
-        }
-      }
-    }
-
-    return tokens.map((token) => {
-      const key = `${token.contractAddress.toLowerCase()}-${token.tokenId || ''}`;
-      const ts = dateMap.get(key);
-      return ts ? { ...token, mintedAt: ts } : token;
-    });
-  } catch {
-    return tokens;
+    transferList.push({ contract, tokenId: decId, timestamp });
+    if (transferList.length >= limit) break;
   }
+
+  const metadataResults = await Promise.allSettled(
+    transferList.map((t) => client.nft.getNftMetadata(t.contract, t.tokenId))
+  );
+
+  const tokens: UnifiedToken[] = [];
+  for (let i = 0; i < metadataResults.length; i++) {
+    const r = metadataResults[i];
+    if (r.status !== 'fulfilled') continue;
+    const nft = r.value as unknown as Record<string, unknown>;
+    tokens.push(nftToToken(nft, chain, transferList[i].timestamp));
+  }
+
+  return tokens;
 }
 
 export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey, limit: number = 0): Promise<UnifiedToken[]> {
   const addr = wallet || DEFAULT_WALLET;
   const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
-  const results = await Promise.allSettled(
-    chains.map(async (c) => {
-      const tokens = await fetchNftsForChain(c, addr, limit);
-      return enrichTokenDates(tokens, c, addr);
-    })
-  );
+  const results = await Promise.allSettled(chains.map((c) => fetchNftsForChain(c, addr, limit)));
 
   const tokens: UnifiedToken[] = [];
   for (const result of results) {
@@ -161,6 +186,27 @@ export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey, limi
     }
   }
   return tokens;
+}
+
+export async function fetchNewestNfts(wallet?: string, limit: number = 100): Promise<UnifiedToken[]> {
+  const addr = wallet || DEFAULT_WALLET;
+  const perChain = Math.ceil(limit / CHAIN_KEYS.length) + 10;
+  const results = await Promise.allSettled(CHAIN_KEYS.map((c) => fetchNewestForChain(c, addr, perChain)));
+
+  const tokens: UnifiedToken[] = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      tokens.push(...result.value);
+    }
+  }
+
+  tokens.sort((a, b) => {
+    const ta = a.mintedAt ? new Date(a.mintedAt).getTime() : 0;
+    const tb = b.mintedAt ? new Date(b.mintedAt).getTime() : 0;
+    return tb - ta;
+  });
+
+  return tokens.slice(0, limit);
 }
 
 export async function fetchTransfers(wallet?: string, chainFilter?: ChainKey): Promise<WalletConnection[]> {

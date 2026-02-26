@@ -99,7 +99,6 @@ function sizeAwareSpacing(density: number, thumbnailSize: number): number {
 function getMintTime(t: UnifiedToken): number {
   if (t.mintedAt) return new Date(t.mintedAt).getTime();
   if (t.acquiredAt) return new Date(t.acquiredAt).getTime();
-  if (t.lastUpdated) return new Date(t.lastUpdated).getTime();
   return 0;
 }
 

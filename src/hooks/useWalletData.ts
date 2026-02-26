@@ -16,16 +16,16 @@ export function useWalletData() {
   const setLoadProgress = useStore((s) => s.setLoadProgress);
   const setError = useStore((s) => s.setError);
 
-  const allChainsLoaded = useRef(false);
+  const newestLoaded = useRef(false);
   const singleChainLoaded = useRef<string | null>(null);
 
   useEffect(() => {
     if (!walletLoaded || !evmAddress) return;
 
-    const needAllChains = sortBy === 'newest';
+    const needNewest = sortBy === 'newest';
 
-    if (needAllChains && allChainsLoaded.current) return;
-    if (!needAllChains && singleChainLoaded.current === activeChain) return;
+    if (needNewest && newestLoaded.current) return;
+    if (!needNewest && singleChainLoaded.current === activeChain) return;
 
     let cancelled = false;
 
@@ -34,39 +34,27 @@ export function useWalletData() {
       setError(null);
       setLoadProgress(0);
 
-      if (needAllChains) {
-        allChainsLoaded.current = false;
+      if (needNewest) {
+        newestLoaded.current = false;
         singleChainLoaded.current = null;
-        let completed = 0;
-        let first = true;
 
-        const fetches = CHAIN_KEYS.map((chain) =>
-          fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, chain, limit: '100' })}`)
-            .then(async (res) => {
-              if (cancelled) return;
-              const data = await res.json();
-              if (!res.ok) return;
-              const tokens = data.tokens || [];
-              if (!cancelled && tokens.length > 0) {
-                if (first) {
-                  setTokens(tokens);
-                  first = false;
-                } else {
-                  appendTokens(tokens);
-                }
-              }
-            })
-            .catch(() => {})
-            .finally(() => {
-              completed++;
-              if (!cancelled) setLoadProgress(completed / CHAIN_KEYS.length);
-            })
-        );
-
-        await Promise.all(fetches);
-        if (!cancelled) allChainsLoaded.current = true;
+        try {
+          const res = await fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, mode: 'newest', limit: '200' })}`);
+          if (cancelled) return;
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to fetch newest');
+          if (!cancelled) {
+            setTokens(data.tokens || []);
+            setLoadProgress(1);
+            newestLoaded.current = true;
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : 'Failed to load newest tokens');
+          }
+        }
       } else {
-        allChainsLoaded.current = false;
+        newestLoaded.current = false;
         try {
           const res = await fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, chain: activeChain })}`);
           if (cancelled) return;
