@@ -36,11 +36,6 @@ export default function Scene() {
         speed={0.3}
       />
 
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[5, 5, 5]} />
-        <meshStandardMaterial color="red" />
-      </mesh>
-
       <TokenCloud tokens={filteredTokens} onSelect={setSelectedToken} />
       <ConnectionLines connections={connections} />
 

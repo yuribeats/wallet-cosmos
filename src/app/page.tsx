@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useWalletData } from '@/hooks/useWalletData';
 import { useStore } from '@/hooks/useStore';
 import FilterPanel from '@/components/FilterPanel';
 import TokenDetail from '@/components/TokenDetail';
 import HUD from '@/components/HUD';
 import WalletInput from '@/components/WalletInput';
+
+const Scene = dynamic(() => import('@/components/Scene'), { ssr: false });
 
 export default function Home() {
   useWalletData();
@@ -18,52 +20,13 @@ export default function Home() {
   const loadProgress = useStore((s) => s.loadProgress);
   const error = useStore((s) => s.error);
 
-  const [SceneComponent, setSceneComponent] = useState<React.ComponentType | null>(null);
-  const [sceneError, setSceneError] = useState<string | null>(null);
-
-  useEffect(() => {
-    import('@/components/Scene')
-      .then((mod) => setSceneComponent(() => mod.default))
-      .catch((err) => setSceneError(err?.message || 'Failed to load 3D scene'));
-  }, []);
-
   if (!walletLoaded) {
     return <WalletInput />;
   }
 
   return (
     <main style={{ width: '100vw', height: '100vh', position: 'relative', cursor: 'crosshair' }}>
-      {sceneError && (
-        <div style={{
-          position: 'fixed',
-          top: '10px',
-          right: '10px',
-          zIndex: 999,
-          background: '#FF0420',
-          color: '#fff',
-          padding: '8px 12px',
-          fontSize: '11px',
-          fontWeight: 'bold',
-          textTransform: 'uppercase',
-        }}>
-          SCENE ERROR: {sceneError}
-        </div>
-      )}
-
-      {SceneComponent ? <SceneComponent /> : (
-        <div style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: '#666',
-          fontSize: '11px',
-          fontWeight: 'bold',
-          textTransform: 'uppercase',
-        }}>
-          {sceneError ? '' : 'LOADING 3D ENGINE...'}
-        </div>
-      )}
+      <Scene />
 
       {isLoading && (
         <div style={{
