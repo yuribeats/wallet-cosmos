@@ -53,7 +53,7 @@ export const useStore = create<WalletStore>((set, get) => ({
   evmAddress: '',
   walletLoaded: false,
 
-  activeChain: 'ethereum',
+  activeChain: 'base',
 
   setTokens: (tokens) => set({ tokens }),
   appendTokens: (tokens) => set((s) => ({ tokens: [...s.tokens, ...tokens] })),

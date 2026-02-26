@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { CHAINS, type ChainKey } from '@/lib/constants';
 import type { UnifiedToken } from '@/lib/types';
@@ -92,10 +92,22 @@ function TokenCard({ token, onSelect }: { token: UnifiedToken; onSelect: (t: Uni
   );
 }
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return mobile;
+}
+
 export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
   const filters = useStore((s) => s.filters);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
   const storeTokens = useStore((s) => s.tokens);
+  const isMobile = useIsMobile();
 
   const filteredTokens = useMemo(
     () => getFilteredTokens(),
@@ -115,7 +127,7 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
     }}>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+        gridTemplateColumns: isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(120px, 1fr))',
         gap: '2px',
         maxWidth: '1400px',
         margin: '0 auto',
