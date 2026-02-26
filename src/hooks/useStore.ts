@@ -10,16 +10,19 @@ interface WalletStore {
   filters: FilterState;
   selectedToken: UnifiedToken | null;
   isLoading: boolean;
+  loadProgress: number;
   error: string | null;
 
   evmAddress: string;
   walletLoaded: boolean;
 
   setTokens: (tokens: UnifiedToken[]) => void;
+  appendTokens: (tokens: UnifiedToken[]) => void;
   setConnections: (connections: WalletConnection[]) => void;
   setFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   setSelectedToken: (token: UnifiedToken | null) => void;
   setLoading: (loading: boolean) => void;
+  setLoadProgress: (progress: number) => void;
   setError: (error: string | null) => void;
   loadWallet: (evm: string) => void;
   getFilteredTokens: () => UnifiedToken[];
@@ -39,20 +42,23 @@ export const useStore = create<WalletStore>((set, get) => ({
   },
   selectedToken: null,
   isLoading: false,
+  loadProgress: 0,
   error: null,
 
   evmAddress: '',
   walletLoaded: false,
 
   setTokens: (tokens) => set({ tokens }),
+  appendTokens: (tokens) => set((s) => ({ tokens: [...s.tokens, ...tokens] })),
   setConnections: (connections) => set({ connections }),
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
   setSelectedToken: (token) => set({ selectedToken: token }),
   setLoading: (loading) => set({ isLoading: loading }),
+  setLoadProgress: (progress) => set({ loadProgress: progress }),
   setError: (error) => set({ error }),
   loadWallet: (evm) =>
-    set({ evmAddress: evm, walletLoaded: true, tokens: [], connections: [], error: null, selectedToken: null }),
+    set({ evmAddress: evm, walletLoaded: true, tokens: [], connections: [], error: null, selectedToken: null, loadProgress: 0 }),
 
   getFilteredTokens: () => {
     const { tokens, filters } = get();

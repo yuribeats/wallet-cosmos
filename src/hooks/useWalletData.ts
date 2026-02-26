@@ -2,13 +2,16 @@
 
 import { useEffect } from 'react';
 import { useStore } from './useStore';
+import { CHAIN_KEYS } from '@/lib/constants';
 
 export function useWalletData() {
   const evmAddress = useStore((s) => s.evmAddress);
   const walletLoaded = useStore((s) => s.walletLoaded);
   const setTokens = useStore((s) => s.setTokens);
+  const appendTokens = useStore((s) => s.appendTokens);
   const setConnections = useStore((s) => s.setConnections);
   const setLoading = useStore((s) => s.setLoading);
+  const setLoadProgress = useStore((s) => s.setLoadProgress);
   const setError = useStore((s) => s.setError);
 
   useEffect(() => {
@@ -19,31 +22,50 @@ export function useWalletData() {
     async function load() {
       setLoading(true);
       setError(null);
+      setLoadProgress(0);
 
-      try {
-        const params = new URLSearchParams({ wallet: evmAddress });
-        const res = await fetch(`/api/nfts?${params}`);
-        if (cancelled) return;
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to fetch NFTs');
-        if (!cancelled) setTokens(data.tokens || []);
+      let completed = 0;
+      let first = true;
 
-        fetch(`/api/transfers?${new URLSearchParams({ wallet: evmAddress })}`)
-          .then((r) => r.json())
-          .then((d) => {
-            if (!cancelled && d.connections) setConnections(d.connections);
+      const fetches = CHAIN_KEYS.map((chain) =>
+        fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, chain })}`)
+          .then(async (res) => {
+            if (cancelled) return;
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || `Failed to fetch ${chain}`);
+            const tokens = data.tokens || [];
+            if (!cancelled && tokens.length > 0) {
+              if (first) {
+                setTokens(tokens);
+                first = false;
+              } else {
+                appendTokens(tokens);
+              }
+            }
           })
-          .catch(() => {});
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Unknown error');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+          .catch(() => {})
+          .finally(() => {
+            completed++;
+            if (!cancelled) setLoadProgress(completed / CHAIN_KEYS.length);
+          })
+      );
+
+      await Promise.all(fetches);
+
+      if (!cancelled) {
+        setLoading(false);
+        setLoadProgress(1);
       }
+
+      fetch(`/api/transfers?${new URLSearchParams({ wallet: evmAddress })}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!cancelled && d.connections) setConnections(d.connections);
+        })
+        .catch(() => {});
     }
 
     load();
     return () => { cancelled = true; };
-  }, [evmAddress, walletLoaded, setTokens, setConnections, setLoading, setError]);
+  }, [evmAddress, walletLoaded, setTokens, appendTokens, setConnections, setLoading, setLoadProgress, setError]);
 }
