@@ -6,7 +6,6 @@ import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
 import type { ChainKey } from '@/lib/constants';
 
 const STANDARDS = ['ERC721', 'ERC1155'];
-const MEDIA_TYPES = ['image', 'video'];
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'chain', label: 'SPHERE' },
   { value: 'grid', label: 'GRID' },
@@ -75,7 +74,7 @@ export default function FilterPanel() {
   const [collapsed, setCollapsed] = useState(true);
 
 
-  function toggleArrayFilter(key: 'standards' | 'mediaTypes', value: string) {
+  function toggleArrayFilter(key: 'standards', value: string) {
     const current = filters[key];
     const next = current.includes(value)
       ? current.filter((v) => v !== value)
@@ -270,20 +269,6 @@ export default function FilterPanel() {
               active={filters.standards.includes(s)}
               label={s.replace('ERC', '')}
               onClick={() => toggleArrayFilter('standards', s)}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '12px' }}>
-        <span style={labelStyle}>MEDIA</span>
-        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-          {MEDIA_TYPES.map((m) => (
-            <ToggleButton
-              key={m}
-              active={filters.mediaTypes.includes(m)}
-              label={m}
-              onClick={() => toggleArrayFilter('mediaTypes', m)}
             />
           ))}
         </div>
