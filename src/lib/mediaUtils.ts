@@ -1,7 +1,7 @@
 export function resolveUrl(url: string | undefined | null): string | undefined {
   if (!url) return undefined;
   if (url.startsWith('ipfs://')) {
-    return url.replace('ipfs://', 'https://walletexplorer.mypinata.cloud/ipfs/');
+    return url.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
   }
   if (url.startsWith('ar://')) {
     return url.replace('ar://', 'https://arweave.net/');
