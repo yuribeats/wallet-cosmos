@@ -36,6 +36,7 @@ export interface WalletConnection {
 
 export type FilterState = {
   standards: string[];
+  mediaTypes: string[];
   layout: 'grid' | 'chain' | 'creator' | 'mediaType' | 'date' | 'tokenType';
   useNewest: boolean;
   sortDirection: 'asc' | 'desc';

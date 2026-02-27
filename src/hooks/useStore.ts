@@ -36,6 +36,7 @@ export const useStore = create<WalletStore>((set, get) => ({
   connections: [],
   filters: {
     standards: ['ERC1155'],
+    mediaTypes: [],
     layout: 'grid',
     useNewest: true,
     sortDirection: 'desc',
@@ -81,6 +82,10 @@ export const useStore = create<WalletStore>((set, get) => ({
 
     filtered = filtered.filter((t) => t.media.thumbnail || t.media.image);
     filtered = filtered.filter((t) => filters.standards.includes(t.standard));
+
+    if (filters.mediaTypes.length > 0) {
+      filtered = filtered.filter((t) => filters.mediaTypes.includes(t.media.mediaType));
+    }
 
     if (filters.selectedCreator) {
       filtered = filtered.filter((t) => t.creator === filters.selectedCreator);
