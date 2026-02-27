@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) return new NextResponse(null, { status: res.status });

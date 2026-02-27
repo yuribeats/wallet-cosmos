@@ -1,25 +1,41 @@
 'use client';
 
+import { useState } from 'react';
 import type { UnifiedToken } from '@/lib/types';
 
 interface MediaRendererProps {
   token: UnifiedToken;
 }
 
+function proxyUrl(url: string): string {
+  return `/api/image?url=${encodeURIComponent(url)}`;
+}
+
 export default function MediaRenderer({ token }: MediaRendererProps) {
   const { media } = token;
+  const [videoError, setVideoError] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [useProxyVideo, setUseProxyVideo] = useState(false);
 
-  if (media.mediaType === 'video' && media.video) {
+  if (media.mediaType === 'video' && media.video && !videoError) {
+    const videoSrc = useProxyVideo ? proxyUrl(media.video) : media.video;
     return (
       <video
-        src={media.video}
-        poster={media.image}
+        key={videoSrc}
+        src={videoSrc}
+        poster={media.image ? proxyUrl(media.image) : undefined}
         controls
         autoPlay
         muted
         playsInline
         loop
-        crossOrigin="anonymous"
+        onError={() => {
+          if (!useProxyVideo) {
+            setUseProxyVideo(true);
+          } else {
+            setVideoError(true);
+          }
+        }}
         style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', background: '#000' }}
       />
     );
@@ -30,8 +46,9 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
       <div>
         {media.image && (
           <img
-            src={media.image}
+            src={proxyUrl(media.image)}
             alt={token.name}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             style={{ width: '100%', maxHeight: '300px', objectFit: 'contain' }}
           />
         )}
@@ -59,17 +76,17 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
     );
   }
 
-  if (media.image) {
+  if (media.image && !imageError) {
     return (
       <img
-        src={media.image}
+        src={proxyUrl(media.image)}
         alt={token.name}
+        onError={() => setImageError(true)}
         style={{ width: '100%', maxHeight: '400px', objectFit: 'contain' }}
       />
     );
   }
 
-  // Text fallback
   return (
     <div style={{
       width: '100%',
