@@ -1,36 +1,24 @@
 'use client';
 
-import { useState, useRef } from 'react';
 import type { UnifiedToken } from '@/lib/types';
 
 interface MediaRendererProps {
   token: UnifiedToken;
 }
 
-function proxyUrl(url: string): string {
-  return `/api/image?url=${encodeURIComponent(url)}`;
-}
-
 export default function MediaRenderer({ token }: MediaRendererProps) {
   const { media } = token;
-  const [videoFailed, setVideoFailed] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Video: load directly, no proxy. Fall back to image only on true failure.
-  if (media.mediaType === 'video' && media.video && !videoFailed) {
+  if (media.mediaType === 'video' && media.video) {
     return (
       <video
-        ref={videoRef}
-        key={media.video}
         src={media.video}
-        poster={media.image ? proxyUrl(media.image) : undefined}
+        poster={media.image}
         controls
         autoPlay
         muted
         playsInline
         loop
-        onError={() => setVideoFailed(true)}
         style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', background: '#000' }}
       />
     );
@@ -41,9 +29,8 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
       <div>
         {media.image && (
           <img
-            src={proxyUrl(media.image)}
+            src={media.image}
             alt={token.name}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             style={{ width: '100%', maxHeight: '300px', objectFit: 'contain' }}
           />
         )}
@@ -71,19 +58,17 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
     );
   }
 
-  // Image, or video fallback
-  const imageSrc = media.image || media.video;
-  if (imageSrc && !imageError) {
+  if (media.image) {
     return (
       <img
-        src={proxyUrl(imageSrc)}
+        src={media.image}
         alt={token.name}
-        onError={() => setImageError(true)}
         style={{ width: '100%', maxHeight: '400px', objectFit: 'contain' }}
       />
     );
   }
 
+  // Text fallback
   return (
     <div style={{
       width: '100%',

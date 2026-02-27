@@ -62,7 +62,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
       </button>
 
       <div style={{ marginTop: '48px', marginBottom: '20px' }}>
-        <MediaRenderer key={token.id} token={token} />
+        <MediaRenderer token={token} />
       </div>
 
       <h2 style={{
