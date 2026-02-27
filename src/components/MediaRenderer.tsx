@@ -10,20 +10,52 @@ interface MediaRendererProps {
 export default function MediaRenderer({ token }: MediaRendererProps) {
   const { media } = token;
   const [videoFailed, setVideoFailed] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   if (media.mediaType === 'video' && media.video && !videoFailed) {
     return (
-      <video
-        src={media.video}
-        poster={media.image}
-        controls
-        autoPlay
-        muted
-        playsInline
-        loop
-        onError={() => setVideoFailed(true)}
-        style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', background: '#000' }}
-      />
+      <div style={{ position: 'relative', width: '100%', maxHeight: '400px', background: '#000' }}>
+        {!videoReady && media.image && (
+          <img
+            src={media.image}
+            alt={token.name}
+            style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', display: 'block' }}
+          />
+        )}
+        {!videoReady && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: '11px',
+            fontFamily: 'inherit',
+            fontWeight: 'bold',
+            color: '#666',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+          }}>
+            LOADING VIDEO...
+          </div>
+        )}
+        <video
+          src={media.video}
+          controls
+          autoPlay
+          muted
+          playsInline
+          loop
+          preload="auto"
+          onCanPlay={() => setVideoReady(true)}
+          onError={() => setVideoFailed(true)}
+          style={{
+            width: '100%',
+            maxHeight: '400px',
+            objectFit: 'contain',
+            display: videoReady ? 'block' : 'none',
+          }}
+        />
+      </div>
     );
   }
 
