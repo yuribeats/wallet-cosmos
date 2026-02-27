@@ -172,7 +172,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
               cursor: 'crosshair',
             }}
           >
-            DESKTOP BACKGROUND
+            DOWNLOAD MEDIA
           </a>
         )}
       </div>
