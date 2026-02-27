@@ -17,8 +17,10 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
   const [imageError, setImageError] = useState(false);
   const [useProxyVideo, setUseProxyVideo] = useState(false);
 
-  // Confirmed video (by file extension)
-  if (media.mediaType === 'video' && media.video && !videoError) {
+  const isVideo = media.mediaType === 'video' || media.mediaType === 'unknown';
+
+  // Video or unknown: try video tag first, fall back to image on error
+  if (isVideo && media.video && !videoError) {
     const videoSrc = useProxyVideo ? proxyUrl(media.video) : media.video;
     return (
       <video
@@ -77,7 +79,7 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
     );
   }
 
-  // For 'image', 'unknown' (ambiguous animation_url), and video fallback — show as image
+  // Image, or video/unknown fallback after video tag failed
   const imageSrc = media.image || media.video;
   if (imageSrc && !imageError) {
     return (
