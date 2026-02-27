@@ -6,7 +6,7 @@ import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
 import type { ChainKey } from '@/lib/constants';
 
 const STANDARDS = ['ERC721', 'ERC1155'];
-const MEDIA_TYPES = ['image', 'video', 'audio', 'model'];
+const MEDIA_TYPES = ['image', 'video', 'audio'];
 const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'chain', label: 'SPHERE' },
   { value: 'grid', label: 'GRID' },
