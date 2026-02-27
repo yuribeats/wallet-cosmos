@@ -12,6 +12,7 @@ export function resolveUrl(url: string | undefined | null): string | undefined {
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.ogv'];
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.m4a'];
 const HTML_EXTENSIONS = ['.html', '.htm'];
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.avif', '.bmp', '.tiff'];
 
 export function detectMediaType(
   animationUrl?: string | null,
@@ -22,8 +23,9 @@ export function detectMediaType(
     if (VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'video';
     if (AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'audio';
     if (HTML_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'html';
-    // Any animation_url without recognized extension defaults to video
-    return 'video';
+    if (IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'image';
+    // No recognized extension — treat as unknown, will be resolved at render time
+    return 'unknown';
   }
   if (imageUrl) {
     const lower = imageUrl.toLowerCase().split('?')[0];
@@ -56,7 +58,7 @@ export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
   return {
     image: resolvedImage,
     thumbnail: resolvedThumbnail,
-    video: mediaType === 'video' ? (resolvedAnimation || resolvedImage) : undefined,
+    video: (mediaType === 'video' || mediaType === 'unknown') ? (resolvedAnimation || resolvedImage) : undefined,
     audio: mediaType === 'audio' ? resolvedAnimation : undefined,
     mediaType,
   };

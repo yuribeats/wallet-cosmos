@@ -17,6 +17,7 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
   const [imageError, setImageError] = useState(false);
   const [useProxyVideo, setUseProxyVideo] = useState(false);
 
+  // Confirmed video (by file extension)
   if (media.mediaType === 'video' && media.video && !videoError) {
     const videoSrc = useProxyVideo ? proxyUrl(media.video) : media.video;
     return (
@@ -76,10 +77,12 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
     );
   }
 
-  if (media.image && !imageError) {
+  // For 'image', 'unknown' (ambiguous animation_url), and video fallback — show as image
+  const imageSrc = media.image || media.video;
+  if (imageSrc && !imageError) {
     return (
       <img
-        src={proxyUrl(media.image)}
+        src={proxyUrl(imageSrc)}
         alt={token.name}
         onError={() => setImageError(true)}
         style={{ width: '100%', maxHeight: '400px', objectFit: 'contain' }}
