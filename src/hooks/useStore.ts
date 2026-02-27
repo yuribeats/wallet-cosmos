@@ -114,6 +114,10 @@ export const useStore = create<WalletStore>((set, get) => ({
       filtered = filtered.filter((t) => t.creator === filters.selectedCreator);
     }
 
+    if (filters.selectedCollection) {
+      filtered = filtered.filter((t) => t.collectionName === filters.selectedCollection);
+    }
+
     if (filters.searchQuery) {
       const q = filters.searchQuery.toLowerCase();
       filtered = filtered.filter(

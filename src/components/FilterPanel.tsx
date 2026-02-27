@@ -353,6 +353,44 @@ export default function FilterPanel() {
         </div>
       </div>
 
+      {filters.selectedCollection && (
+        <div style={{ marginBottom: '12px' }}>
+          <span style={labelStyle}>COLLECTION</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              color: '#228B22',
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {filters.selectedCollection}
+            </span>
+            <button
+              onClick={() => setFilter('selectedCollection', undefined)}
+              style={{
+                background: 'none',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#666',
+                padding: '3px 8px',
+                fontSize: '9px',
+                fontWeight: 'bold',
+                fontFamily: 'inherit',
+                textTransform: 'uppercase',
+                cursor: 'crosshair',
+                letterSpacing: '0.05em',
+                flexShrink: 0,
+              }}
+            >
+              CLEAR
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>SEARCH</span>
         <input

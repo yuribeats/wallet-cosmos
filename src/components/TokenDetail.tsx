@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { UnifiedToken } from '@/lib/types';
 import { CHAINS, type ChainKey } from '@/lib/constants';
+import { useStore } from '@/hooks/useStore';
 import MediaRenderer from './MediaRenderer';
 
 interface TokenDetailProps {
@@ -77,7 +78,18 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
 
       <div style={{ fontSize: mobile ? '11px' : '12px', lineHeight: '2', fontFamily: 'monospace', wordBreak: 'break-all' }}>
         {token.collectionName && (
-          <div><span style={{ color: '#666' }}>COLLECTION:</span> {token.collectionName}</div>
+          <div>
+            <span style={{ color: '#666' }}>COLLECTION:</span>{' '}
+            <span
+              onClick={() => {
+                useStore.getState().setFilter('selectedCollection', token.collectionName);
+                onClose();
+              }}
+              style={{ color: '#228B22', cursor: 'crosshair', textDecoration: 'none' }}
+            >
+              {token.collectionName}
+            </span>
+          </div>
         )}
         {token.creator && (
           <div><span style={{ color: '#666' }}>CREATOR:</span> {truncAddr(token.creator)}</div>

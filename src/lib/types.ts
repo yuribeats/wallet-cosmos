@@ -42,6 +42,7 @@ export type FilterState = {
   sortDirection: 'asc' | 'desc';
   searchQuery: string;
   selectedCreator?: string;
+  selectedCollection?: string;
   density: number;
   newestCount: number;
   thumbnailSize: number;
