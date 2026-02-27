@@ -9,7 +9,7 @@ function isEnsName(value: string): boolean {
 }
 
 export default function WalletInput() {
-  const [value, setValue] = useState(DEFAULT_WALLET);
+  const [value, setValue] = useState('');
   const [error, setError] = useState('');
   const [resolving, setResolving] = useState(false);
   const loadWallet = useStore((s) => s.loadWallet);
