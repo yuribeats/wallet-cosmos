@@ -8,6 +8,9 @@ import TokenDetail from '@/components/TokenDetail';
 import HUD from '@/components/HUD';
 import WalletInput from '@/components/WalletInput';
 import TokenGrid from '@/components/TokenGrid';
+import dynamic from 'next/dynamic';
+
+const PlaylistPlayer = dynamic(() => import('@/components/PlaylistPlayer'), { ssr: false });
 
 function hasWebGL(): boolean {
   try {
@@ -24,6 +27,7 @@ export default function Home() {
   const walletLoaded = useStore((s) => s.walletLoaded);
   const selectedToken = useStore((s) => s.selectedToken);
   const setSelectedToken = useStore((s) => s.setSelectedToken);
+  const playlistOpen = useStore((s) => s.playlistOpen);
   const isLoading = useStore((s) => s.isLoading);
   const loadProgress = useStore((s) => s.loadProgress);
   const error = useStore((s) => s.error);
@@ -105,6 +109,8 @@ export default function Home() {
           onClose={() => setSelectedToken(null)}
         />
       )}
+
+      {playlistOpen && <PlaylistPlayer />}
 
       {error && (
         <div style={{

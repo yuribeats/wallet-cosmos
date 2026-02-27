@@ -18,6 +18,10 @@ interface WalletStore {
 
   activeChain: ChainKey;
 
+  playlistOpen: boolean;
+  playlistTokens: UnifiedToken[];
+  playlistIndex: number;
+
   setTokens: (tokens: UnifiedToken[]) => void;
   appendTokens: (tokens: UnifiedToken[]) => void;
   setConnections: (connections: WalletConnection[]) => void;
@@ -29,6 +33,11 @@ interface WalletStore {
   loadWallet: (evm: string) => void;
   setActiveChain: (chain: ChainKey) => void;
   getFilteredTokens: () => UnifiedToken[];
+  openPlaylist: () => void;
+  closePlaylist: () => void;
+  nextTrack: () => void;
+  prevTrack: () => void;
+  setPlaylistIndex: (index: number) => void;
 }
 
 export const useStore = create<WalletStore>((set, get) => ({
@@ -56,6 +65,10 @@ export const useStore = create<WalletStore>((set, get) => ({
 
   activeChain: 'base',
 
+  playlistOpen: false,
+  playlistTokens: [],
+  playlistIndex: 0,
+
   setTokens: (tokens) => set({ tokens }),
   appendTokens: (tokens) => set((s) => ({ tokens: [...s.tokens, ...tokens] })),
   setConnections: (connections) => set({ connections }),
@@ -75,6 +88,16 @@ export const useStore = create<WalletStore>((set, get) => ({
       loadProgress: 0,
       selectedToken: null,
     }),
+
+  openPlaylist: () => {
+    const filtered = get().getFilteredTokens();
+    const media = filtered.filter((t) => t.media.mediaType === 'video' || t.media.mediaType === 'audio');
+    if (media.length > 0) set({ playlistOpen: true, playlistTokens: media, playlistIndex: 0 });
+  },
+  closePlaylist: () => set({ playlistOpen: false }),
+  nextTrack: () => set((s) => ({ playlistIndex: (s.playlistIndex + 1) % s.playlistTokens.length })),
+  prevTrack: () => set((s) => ({ playlistIndex: (s.playlistIndex - 1 + s.playlistTokens.length) % s.playlistTokens.length })),
+  setPlaylistIndex: (index) => set({ playlistIndex: index }),
 
   getFilteredTokens: () => {
     const { tokens, filters } = get();
