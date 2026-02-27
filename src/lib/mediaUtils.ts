@@ -9,22 +9,25 @@ export function resolveUrl(url: string | undefined | null): string | undefined {
   return url;
 }
 
-type MediaType = 'image' | 'video' | 'audio' | 'html' | 'text' | 'unknown';
+type MediaType = 'image' | 'video' | 'audio' | 'model' | 'html' | 'text' | 'unknown';
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.ogv'];
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.m4a'];
+const MODEL_EXTENSIONS = ['.glb', '.gltf'];
 const HTML_EXTENSIONS = ['.html', '.htm'];
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.avif', '.bmp', '.tiff'];
 
 const VIDEO_MIMES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg', 'video/x-msvideo'];
 const AUDIO_MIMES = ['audio/mpeg', 'audio/wav', 'audio/flac', 'audio/ogg', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/x-wav'];
 const IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml', 'image/avif', 'image/bmp', 'image/tiff'];
+const MODEL_MIMES = ['model/gltf-binary', 'model/gltf+json'];
 const HTML_MIMES = ['text/html', 'application/xhtml+xml'];
 
 function mimeToMediaType(mime: string): MediaType | null {
   const lower = mime.toLowerCase().split(';')[0].trim();
   if (VIDEO_MIMES.some((m) => lower === m) || lower.startsWith('video/')) return 'video';
   if (AUDIO_MIMES.some((m) => lower === m) || lower.startsWith('audio/')) return 'audio';
+  if (MODEL_MIMES.some((m) => lower === m) || lower.startsWith('model/')) return 'model';
   if (IMAGE_MIMES.some((m) => lower === m) || lower.startsWith('image/')) return 'image';
   if (HTML_MIMES.some((m) => lower === m)) return 'html';
   return null;
@@ -34,6 +37,7 @@ function detectByExtension(url: string): MediaType | null {
   const lower = url.toLowerCase().split('?')[0];
   if (VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'video';
   if (AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'audio';
+  if (MODEL_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'model';
   if (HTML_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'html';
   if (IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'image';
   return null;
@@ -136,6 +140,7 @@ export async function resolveMedia(rawMetadata?: Record<string, unknown>, image?
     thumbnail: resolvedThumbnail,
     video: mediaType === 'video' ? (resolvedAnimation || resolvedImage) : undefined,
     audio: mediaType === 'audio' ? resolvedAnimation : undefined,
+    model: mediaType === 'model' ? (resolvedAnimation || resolvedImage) : undefined,
     mediaType,
   };
 }

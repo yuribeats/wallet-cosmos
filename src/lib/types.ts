@@ -14,7 +14,8 @@ export interface UnifiedToken {
     thumbnail?: string;
     video?: string;
     audio?: string;
-    mediaType: 'image' | 'video' | 'audio' | 'text' | 'html' | 'unknown';
+    model?: string;
+    mediaType: 'image' | 'video' | 'audio' | 'model' | 'text' | 'html' | 'unknown';
   };
 
   balance?: string;
