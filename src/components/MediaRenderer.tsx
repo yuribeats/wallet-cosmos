@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { UnifiedToken } from '@/lib/types';
 
 interface MediaRendererProps {
@@ -8,8 +9,9 @@ interface MediaRendererProps {
 
 export default function MediaRenderer({ token }: MediaRendererProps) {
   const { media } = token;
+  const [videoFailed, setVideoFailed] = useState(false);
 
-  if (media.mediaType === 'video' && media.video) {
+  if (media.mediaType === 'video' && media.video && !videoFailed) {
     return (
       <video
         src={media.video}
@@ -19,6 +21,7 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
         muted
         playsInline
         loop
+        onError={() => setVideoFailed(true)}
         style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', background: '#000' }}
       />
     );
