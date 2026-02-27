@@ -414,27 +414,6 @@ export default function FilterPanel() {
         />
       </div>
 
-      <div>
-        <button
-          onClick={() => useStore.getState().openPlaylist()}
-          style={{
-            width: '100%',
-            background: 'rgba(34, 139, 34, 0.15)',
-            border: '1px solid rgba(34, 139, 34, 0.4)',
-            color: '#228B22',
-            padding: '10px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            fontFamily: 'inherit',
-            textTransform: 'uppercase',
-            cursor: 'crosshair',
-            letterSpacing: '0.05em',
-            boxSizing: 'border-box',
-          }}
-        >
-          GENERATE PLAYLIST
-        </button>
-      </div>
     </div>
   );
 }
