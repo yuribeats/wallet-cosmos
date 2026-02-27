@@ -136,7 +136,7 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
         </div>
       )}
 
-      <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
+      <div style={{ marginTop: '24px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
         <a
           href={explorerUrl}
           target="_blank"
@@ -155,6 +155,26 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
         >
           VIEW ON EXPLORER
         </a>
+        {(token.media.image || token.media.thumbnail) && (
+          <a
+            href={`/api/download?url=${encodeURIComponent(token.media.image || token.media.thumbnail || '')}&name=${encodeURIComponent(token.name || 'wallpaper')}`}
+            download
+            style={{
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              padding: '8px 14px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              fontFamily: 'inherit',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              letterSpacing: '0.05em',
+              cursor: 'crosshair',
+            }}
+          >
+            DESKTOP BACKGROUND
+          </a>
+        )}
       </div>
     </div>
   );
