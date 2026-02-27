@@ -82,7 +82,7 @@ export const useStore = create<WalletStore>((set, get) => ({
 
     filtered = filtered.filter((t) => t.media.thumbnail || t.media.image);
     filtered = filtered.filter((t) => filters.standards.includes(t.standard));
-    filtered = filtered.filter((t) => t.media.mediaType === 'unknown' || filters.mediaTypes.includes(t.media.mediaType));
+    filtered = filtered.filter((t) => filters.mediaTypes.includes(t.media.mediaType));
 
     if (filters.selectedCreator) {
       filtered = filtered.filter((t) => t.creator === filters.selectedCreator);

@@ -24,8 +24,8 @@ export function detectMediaType(
     if (AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'audio';
     if (HTML_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'html';
     if (IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'image';
-    // No recognized extension — treat as unknown, will be resolved at render time
-    return 'unknown';
+    // Any animation_url without recognized extension defaults to video
+    return 'video';
   }
   if (imageUrl) {
     const lower = imageUrl.toLowerCase().split('?')[0];
@@ -58,7 +58,7 @@ export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
   return {
     image: resolvedImage,
     thumbnail: resolvedThumbnail,
-    video: (mediaType === 'video' || mediaType === 'unknown') ? (resolvedAnimation || resolvedImage) : undefined,
+    video: mediaType === 'video' ? (resolvedAnimation || resolvedImage) : undefined,
     audio: mediaType === 'audio' ? resolvedAnimation : undefined,
     mediaType,
   };

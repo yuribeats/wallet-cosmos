@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { UnifiedToken } from '@/lib/types';
 
 interface MediaRendererProps {
@@ -13,32 +13,24 @@ function proxyUrl(url: string): string {
 
 export default function MediaRenderer({ token }: MediaRendererProps) {
   const { media } = token;
-  const [videoError, setVideoError] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [useProxyVideo, setUseProxyVideo] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const isVideo = media.mediaType === 'video' || media.mediaType === 'unknown';
-
-  // Video or unknown: try video tag first, fall back to image on error
-  if (isVideo && media.video && !videoError) {
-    const videoSrc = useProxyVideo ? proxyUrl(media.video) : media.video;
+  // Video: load directly, no proxy. Fall back to image only on true failure.
+  if (media.mediaType === 'video' && media.video && !videoFailed) {
     return (
       <video
-        key={videoSrc}
-        src={videoSrc}
+        ref={videoRef}
+        key={media.video}
+        src={media.video}
         poster={media.image ? proxyUrl(media.image) : undefined}
         controls
         autoPlay
         muted
         playsInline
         loop
-        onError={() => {
-          if (!useProxyVideo) {
-            setUseProxyVideo(true);
-          } else {
-            setVideoError(true);
-          }
-        }}
+        onError={() => setVideoFailed(true)}
         style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', background: '#000' }}
       />
     );
@@ -79,7 +71,7 @@ export default function MediaRenderer({ token }: MediaRendererProps) {
     );
   }
 
-  // Image, or video/unknown fallback after video tag failed
+  // Image, or video fallback
   const imageSrc = media.image || media.video;
   if (imageSrc && !imageError) {
     return (
