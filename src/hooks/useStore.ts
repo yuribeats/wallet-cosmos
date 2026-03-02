@@ -48,7 +48,7 @@ export const useStore = create<WalletStore>((set, get) => ({
   tokens: [],
   connections: [],
   filters: {
-    standards: ['ERC721', 'ERC1155'],
+    standards: ['ERC1155'],
     mediaTypes: [],
     layout: 'grid',
     useNewest: true,
