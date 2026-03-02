@@ -22,11 +22,11 @@ const PARAM_MAP = {
 export function filtersToParams(
   filters: FilterState,
   wallets: string[],
-  chain: ChainKey
+  chains: ChainKey[]
 ): string {
   const p = new URLSearchParams();
   p.set('w', wallets.join('|'));
-  p.set('c', chain);
+  p.set('c', chains.join('|'));
 
   p.set(PARAM_MAP.standards, filters.standards.join(','));
   if (filters.mediaTypes.length > 0) p.set(PARAM_MAP.mediaTypes, filters.mediaTypes.join(','));
@@ -49,7 +49,7 @@ export function filtersToParams(
 
 export function paramsToState(search: string): {
   wallets?: string[];
-  chain?: ChainKey;
+  chains?: ChainKey[];
   filters?: Partial<FilterState>;
 } | null {
   const p = new URLSearchParams(search);
@@ -59,7 +59,8 @@ export function paramsToState(search: string): {
   const wallets = wRaw.split('|').filter(Boolean);
   if (wallets.length === 0) return null;
 
-  const chain = (p.get('c') || undefined) as ChainKey | undefined;
+  const cRaw = p.get('c') || '';
+  const chains = cRaw.split('|').filter(Boolean) as ChainKey[] | undefined;
 
   const filters: Partial<FilterState> = {};
 
@@ -108,5 +109,5 @@ export function paramsToState(search: string): {
   const sw = p.get(PARAM_MAP.selectedWallets);
   if (sw) filters.selectedWallets = sw.split('|').filter(Boolean);
 
-  return { wallets, chain, filters };
+  return { wallets, chains, filters };
 }

@@ -16,7 +16,7 @@ interface WalletStore {
   evmAddresses: string[];
   walletLoaded: boolean;
 
-  activeChain: ChainKey;
+  activeChains: ChainKey[];
 
   playlistOpen: boolean;
   playlistTokens: UnifiedToken[];
@@ -34,7 +34,8 @@ interface WalletStore {
   loadWallet: (evm: string) => void;
   addWallet: (address: string) => void;
   removeWallet: (address: string) => void;
-  setActiveChain: (chain: ChainKey) => void;
+  setActiveChains: (chains: ChainKey[]) => void;
+  toggleChain: (chain: ChainKey) => void;
   getFilteredTokens: () => UnifiedToken[];
   openPlaylist: () => void;
   closePlaylist: () => void;
@@ -69,7 +70,7 @@ export const useStore = create<WalletStore>((set, get) => ({
   evmAddresses: [],
   walletLoaded: false,
 
-  activeChain: 'base',
+  activeChains: ['base'],
 
   playlistOpen: false,
   playlistTokens: [],
@@ -109,13 +110,26 @@ export const useStore = create<WalletStore>((set, get) => ({
     }));
   },
 
-  setActiveChain: (chain) =>
+  setActiveChains: (chains) =>
     set({
-      activeChain: chain,
+      activeChains: chains,
       tokens: [],
       loadProgress: 0,
       selectedToken: null,
     }),
+
+  toggleChain: (chain) => {
+    const current = get().activeChains;
+    const has = current.includes(chain);
+    const next = has ? current.filter((c) => c !== chain) : [...current, chain];
+    if (next.length === 0) return;
+    set({
+      activeChains: next,
+      tokens: [],
+      loadProgress: 0,
+      selectedToken: null,
+    });
+  },
 
   openPlaylist: () => {
     const filtered = get().getFilteredTokens();

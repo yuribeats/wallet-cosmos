@@ -7,7 +7,7 @@ import type { UnifiedToken } from '@/lib/types';
 export function useWalletData() {
   const evmAddresses = useStore((s) => s.evmAddresses);
   const walletLoaded = useStore((s) => s.walletLoaded);
-  const activeChain = useStore((s) => s.activeChain);
+  const activeChains = useStore((s) => s.activeChains);
   const useNewest = useStore((s) => s.filters.useNewest);
   const showCreated = useStore((s) => s.filters.showCreated);
   const setTokens = useStore((s) => s.setTokens);
@@ -22,7 +22,8 @@ export function useWalletData() {
   useEffect(() => {
     if (!walletLoaded || evmAddresses.length === 0) return;
 
-    const addressKey = [...evmAddresses].sort().join(',') + ':' + activeChain;
+    const chainsKey = [...activeChains].sort().join(',');
+    const addressKey = [...evmAddresses].sort().join(',') + ':' + chainsKey;
     const needNewest = useNewest;
     const currentKey = addressKey + (needNewest ? ':newest' : ':all');
 
@@ -33,8 +34,8 @@ export function useWalletData() {
 
     let cancelled = false;
 
-    async function fetchForWallet(wallet: string, mode: 'owned' | 'created') {
-      const params: Record<string, string> = { wallet, chain: activeChain };
+    async function fetchForWalletChain(wallet: string, chain: string, mode: 'owned' | 'created') {
+      const params: Record<string, string> = { wallet, chain };
       if (mode === 'created') {
         params.mode = 'created';
       } else if (needNewest) {
@@ -62,7 +63,9 @@ export function useWalletData() {
 
         try {
           const results = await Promise.all(
-            evmAddresses.map((addr) => fetchForWallet(addr, 'owned'))
+            evmAddresses.flatMap((addr) =>
+              activeChains.map((chain) => fetchForWalletChain(addr, chain, 'owned'))
+            )
           );
           if (cancelled) return;
 
@@ -91,7 +94,9 @@ export function useWalletData() {
       if (showCreated && createdLoadedKey.current !== addressKey) {
         try {
           const results = await Promise.all(
-            evmAddresses.map((addr) => fetchForWallet(addr, 'created'))
+            evmAddresses.flatMap((addr) =>
+              activeChains.map((chain) => fetchForWalletChain(addr, chain, 'created'))
+            )
           );
           if (cancelled) return;
 
@@ -130,5 +135,5 @@ export function useWalletData() {
 
     load();
     return () => { cancelled = true; };
-  }, [evmAddresses, walletLoaded, activeChain, useNewest, showCreated, setTokens, setLoading, setLoadProgress, setError]);
+  }, [evmAddresses, walletLoaded, activeChains, useNewest, showCreated, setTokens, setLoading, setLoadProgress, setError]);
 }

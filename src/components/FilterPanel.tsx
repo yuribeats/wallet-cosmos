@@ -70,8 +70,8 @@ function ToggleButton({ active, label, color, onClick }: {
 export default function FilterPanel() {
   const filters = useStore((s) => s.filters);
   const setFilter = useStore((s) => s.setFilter);
-  const activeChain = useStore((s) => s.activeChain);
-  const setActiveChain = useStore((s) => s.setActiveChain);
+  const activeChains = useStore((s) => s.activeChains);
+  const toggleChain = useStore((s) => s.toggleChain);
   const evmAddresses = useStore((s) => s.evmAddresses);
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
@@ -295,12 +295,10 @@ export default function FilterPanel() {
           {CHAIN_KEYS.map((chain) => (
             <ToggleButton
               key={chain}
-              active={activeChain === chain}
+              active={activeChains.includes(chain)}
               label={CHAINS[chain].name}
-              color={activeChain === chain ? CHAINS[chain].color + '40' : undefined}
-              onClick={() => {
-                setActiveChain(chain as ChainKey);
-              }}
+              color={activeChains.includes(chain) ? CHAINS[chain].color + '40' : undefined}
+              onClick={() => toggleChain(chain)}
             />
           ))}
         </div>
@@ -462,7 +460,7 @@ export default function FilterPanel() {
       <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
         <button
           onClick={() => {
-            const qs = filtersToParams(filters, evmAddresses, activeChain);
+            const qs = filtersToParams(filters, evmAddresses, activeChains);
             const url = `${window.location.origin}${window.location.pathname}?${qs}`;
             navigator.clipboard.writeText(url).then(() => {
               setCopied(true);
