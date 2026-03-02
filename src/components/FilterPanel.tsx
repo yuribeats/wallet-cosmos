@@ -5,6 +5,7 @@ import { useStore } from '@/hooks/useStore';
 import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
 import type { ChainKey } from '@/lib/constants';
 import { filtersToParams } from '@/lib/urlFilters';
+import type { UnifiedToken } from '@/lib/types';
 
 const STANDARDS = ['ERC721', 'ERC1155'];
 const MEDIA_TYPES = ['image', 'video', 'audio'];
@@ -73,6 +74,7 @@ export default function FilterPanel() {
   const activeChains = useStore((s) => s.activeChains);
   const toggleChain = useStore((s) => s.toggleChain);
   const evmAddresses = useStore((s) => s.evmAddresses);
+  const getFilteredTokens = useStore((s) => s.getFilteredTokens);
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -457,7 +459,7 @@ export default function FilterPanel() {
         />
       </div>
 
-      <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+      <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <button
           onClick={() => {
             const qs = filtersToParams(filters, evmAddresses, activeChains);
@@ -482,6 +484,49 @@ export default function FilterPanel() {
           }}
         >
           {copied ? 'COPIED TO CLIPBOARD' : 'SHARE THIS VIEW'}
+        </button>
+        <button
+          onClick={() => {
+            const tokens = getFilteredTokens();
+            const escape = (s: string) => `"${s.replace(/"/g, '""')}"`;
+            const rows = [['NAME', 'CHAIN', 'CONTRACT', 'TOKEN_ID', 'MEDIA_TYPE', 'IMAGE_URL', 'VIDEO_URL', 'AUDIO_URL', 'EXPLORER_URL'].join(',')];
+            for (const t of tokens) {
+              const chain = CHAINS[t.chain];
+              const explorerUrl = chain ? `${chain.explorer}/token/${t.contractAddress}` : '';
+              rows.push([
+                escape(t.name),
+                t.chain,
+                t.contractAddress,
+                t.tokenId || '',
+                t.media.mediaType,
+                t.media.image || t.media.thumbnail || '',
+                t.media.video || '',
+                t.media.audio || '',
+                explorerUrl,
+              ].join(','));
+            }
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `tokens-${Date.now()}.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#fff',
+            padding: '8px',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            fontFamily: 'inherit',
+            textTransform: 'uppercase',
+            cursor: 'crosshair',
+            letterSpacing: '0.05em',
+          }}
+        >
+          EXPORT CSV
         </button>
       </div>
 
