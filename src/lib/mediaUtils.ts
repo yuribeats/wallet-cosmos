@@ -95,7 +95,8 @@ export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
   ) as string | undefined;
   const metadataImage = rawMetadata?.image as string | undefined;
 
-  const resolvedImage = resolveUrl(image?.cachedUrl) || resolveUrl(image?.originalUrl) || resolveUrl(metadataImage);
+  const originalImageUrl = resolveUrl(image?.originalUrl) || resolveUrl(metadataImage);
+  const resolvedImage = resolveUrl(image?.cachedUrl) || originalImageUrl;
   const resolvedThumbnail = resolveUrl(image?.thumbnailUrl) || resolvedImage;
   const resolvedAnimation = resolveUrl(animationUrl);
 
@@ -121,6 +122,7 @@ export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
     video: mediaType === 'video' ? (resolvedAnimation || resolvedImage) : undefined,
     audio: mediaType === 'audio' ? resolvedAnimation : undefined,
     model: mediaType === 'model' ? (resolvedAnimation || resolvedImage) : undefined,
+    originalUrl: originalImageUrl || resolvedAnimation,
     mediaType,
   };
 }

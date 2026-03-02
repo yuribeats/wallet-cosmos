@@ -184,9 +184,9 @@ export const useStore = create<WalletStore>((set, get) => ({
     const seen = new Set<string>();
     filtered = filtered.filter((t) => {
       if (!t.collectionName) return true;
-      const originalUrl = (t.rawMetadata?.image as string) || (t.rawMetadata?.animation_url as string) || '';
-      if (!originalUrl) return true;
-      const key = `${t.collectionName}::${originalUrl}`;
+      const url = t.media.originalUrl || '';
+      if (!url) return true;
+      const key = `${t.collectionName}::${url}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

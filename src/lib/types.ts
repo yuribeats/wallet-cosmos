@@ -15,6 +15,7 @@ export interface UnifiedToken {
     video?: string;
     audio?: string;
     model?: string;
+    originalUrl?: string;
     mediaType: 'image' | 'video' | 'audio' | 'model' | 'text' | 'html' | 'unknown';
   };
 
