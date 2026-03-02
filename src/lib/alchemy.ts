@@ -57,24 +57,13 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
       }
     }
 
-    const mediaResults = await Promise.allSettled(
-      nfts.map((nft) => {
-        const raw = nft.raw as Record<string, unknown> | undefined;
-        const metadata = raw?.metadata as Record<string, unknown> | undefined;
-        const image = nft.image as { cachedUrl?: string; thumbnailUrl?: string; originalUrl?: string } | undefined;
-        return resolveMedia(metadata, image);
-      })
-    );
-
     for (let i = 0; i < nfts.length; i++) {
       const nft = nfts[i];
       const raw = nft.raw as Record<string, unknown> | undefined;
       const metadata = raw?.metadata as Record<string, unknown> | undefined;
       const contract = nft.contract as Record<string, unknown> | undefined;
-      const mediaResult = mediaResults[i];
-      const media = mediaResult.status === 'fulfilled'
-        ? mediaResult.value
-        : { mediaType: 'unknown' as const };
+      const image = nft.image as { cachedUrl?: string; thumbnailUrl?: string; originalUrl?: string } | undefined;
+      const media = resolveMedia(metadata, image);
 
       const deployer = (contract?.contractDeployer as string) || undefined;
       const isDeployerMatch = deployer && wallet.toLowerCase() === deployer.toLowerCase();
@@ -107,12 +96,12 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
   return limit > 0 ? tokens.slice(0, limit) : tokens;
 }
 
-async function nftToToken(nft: Record<string, unknown>, chain: ChainKey, mintedAt?: string): Promise<UnifiedToken> {
+function nftToToken(nft: Record<string, unknown>, chain: ChainKey, mintedAt?: string): UnifiedToken {
   const raw = nft.raw as Record<string, unknown> | undefined;
   const metadata = raw?.metadata as Record<string, unknown> | undefined;
   const contract = nft.contract as Record<string, unknown> | undefined;
   const image = nft.image as { cachedUrl?: string; thumbnailUrl?: string; originalUrl?: string } | undefined;
-  const media = await resolveMedia(metadata, image);
+  const media = resolveMedia(metadata, image);
 
   return {
     id: `${chain}-${contract?.address || ''}-${nft.tokenId || ''}`,
@@ -214,16 +203,12 @@ export async function fetchNewestForChain(chain: ChainKey, wallet: string, limit
     transferList.map((t) => client.nft.getNftMetadata(t.contract, t.tokenId))
   );
 
-  const tokenResults = await Promise.allSettled(
-    metadataResults.map((r, i) => {
-      if (r.status !== 'fulfilled') return Promise.reject();
-      return nftToToken(r.value as unknown as Record<string, unknown>, chain, transferList[i].timestamp);
-    })
-  );
-
   const tokens: UnifiedToken[] = [];
-  for (const r of tokenResults) {
-    if (r.status === 'fulfilled') tokens.push(r.value);
+  for (let i = 0; i < metadataResults.length; i++) {
+    const r = metadataResults[i];
+    if (r.status === 'fulfilled') {
+      tokens.push(nftToToken(r.value as unknown as Record<string, unknown>, chain, transferList[i].timestamp));
+    }
   }
 
   return tokens;
@@ -339,7 +324,7 @@ export async function fetchCreatedNfts(wallet?: string, chainFilter?: ChainKey, 
         const meta = metaResults[i];
 
         if (meta.status === 'fulfilled') {
-          const token = await nftToToken(meta.value as unknown as Record<string, unknown>, chain);
+          const token = nftToToken(meta.value as unknown as Record<string, unknown>, chain);
           tokens.push({ ...token, createdByWallet: true, creationSource: 'minted' });
         } else {
           tokens.push({

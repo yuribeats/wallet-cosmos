@@ -62,21 +62,8 @@ function detectFromMetadata(rawMetadata?: Record<string, unknown>): MediaType | 
   return null;
 }
 
-async function sniffContentType(url: string): Promise<MediaType | null> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(url, {
-      method: 'HEAD',
-      signal: controller.signal,
-      redirect: 'follow',
-    });
-    clearTimeout(timeout);
-    const ct = res.headers.get('content-type');
-    if (ct) return mimeToMediaType(ct);
-  } catch { /* sniff is best-effort */ }
-  return null;
-}
+// Removed sniffContentType HEAD requests — too slow (4s timeout per token).
+// Extension detection + metadata mime covers 95%+ of cases.
 
 export function detectMediaType(
   animationUrl?: string | null,
@@ -95,7 +82,7 @@ export function detectMediaType(
   return 'text';
 }
 
-export async function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
+export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
   cachedUrl?: string | null;
   originalUrl?: string | null;
   thumbnailUrl?: string | null;
@@ -123,15 +110,8 @@ export async function resolveMedia(rawMetadata?: Record<string, unknown>, image?
     const metaType = detectFromMetadata(rawMetadata);
     if (metaType) {
       mediaType = metaType;
-    } else if (urlToCheck) {
-      const sniffed = await sniffContentType(urlToCheck);
-      if (sniffed) {
-        mediaType = sniffed;
-      } else {
-        mediaType = resolvedAnimation ? 'video' : resolvedImage ? 'image' : 'text';
-      }
     } else {
-      mediaType = 'text';
+      mediaType = resolvedAnimation ? 'video' : resolvedImage ? 'image' : 'text';
     }
   }
 

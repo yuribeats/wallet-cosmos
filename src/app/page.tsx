@@ -87,45 +87,26 @@ export default function Home() {
       {isLoading && (
         <div style={{
           position: 'fixed',
-          inset: 0,
-          zIndex: 200,
-          pointerEvents: 'all',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '20px',
-          background: 'rgba(10, 10, 15, 0.85)',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '2px',
+          zIndex: 300,
+          background: 'rgba(255,255,255,0.05)',
         }}>
           <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            border: '2px solid rgba(255,255,255,0.1)',
-            borderTopColor: '#fff',
-            animation: 'spin 1s linear infinite',
+            height: '100%',
+            background: '#fff',
+            width: `${Math.max(loadProgress * 100, 5)}%`,
+            transition: 'width 0.3s ease',
           }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <div style={{
-            fontWeight: 'bold',
-            fontSize: '12px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em',
-            color: '#fff',
-          }}>
-            LOADING
-          </div>
         </div>
       )}
 
-      {!isLoading && (
-        <>
-          <FilterPanel />
-          <HUD />
-        </>
-      )}
+      <FilterPanel />
+      <HUD />
 
-      {selectedToken && !isLoading && (
+      {selectedToken && (
         <TokenDetail
           token={selectedToken}
           onClose={() => setSelectedToken(null)}

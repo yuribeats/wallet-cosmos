@@ -11,6 +11,7 @@ export function useWalletData() {
   const useNewest = useStore((s) => s.filters.useNewest);
   const showCreated = useStore((s) => s.filters.showCreated);
   const setTokens = useStore((s) => s.setTokens);
+  const appendTokens = useStore((s) => s.appendTokens);
   const setLoading = useStore((s) => s.setLoading);
   const setLoadProgress = useStore((s) => s.setLoadProgress);
   const setError = useStore((s) => s.setError);
@@ -60,35 +61,42 @@ export function useWalletData() {
       if (needOwnedFetch) {
         loadedKey.current = null;
         createdLoadedKey.current = null;
+        ownedTokensRef.current = [];
+        setTokens([]);
 
-        try {
-          const results = await Promise.all(
-            evmAddresses.flatMap((addr) =>
-              activeChains.map((chain) => fetchForWalletChain(addr, chain, 'owned'))
-            )
-          );
-          if (cancelled) return;
+        const jobs = evmAddresses.flatMap((addr) =>
+          activeChains.map((chain) => ({ addr, chain }))
+        );
+        const totalJobs = jobs.length;
+        let completed = 0;
+        const seen = new Set<string>();
 
-          const allOwned: UnifiedToken[] = [];
-          const seen = new Set<string>();
-          for (const tokens of results) {
-            for (const t of tokens) {
-              if (!seen.has(t.id)) {
-                seen.add(t.id);
-                allOwned.push(t);
+        await Promise.allSettled(
+          jobs.map(async ({ addr, chain }) => {
+            try {
+              const tokens = await fetchForWalletChain(addr, chain, 'owned');
+              if (cancelled) return;
+              const fresh: UnifiedToken[] = [];
+              for (const t of tokens) {
+                if (!seen.has(t.id)) {
+                  seen.add(t.id);
+                  fresh.push(t);
+                }
               }
+              if (fresh.length > 0) {
+                ownedTokensRef.current = [...ownedTokensRef.current, ...fresh];
+                appendTokens(fresh);
+              }
+            } catch (err) {
+              if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load tokens');
+            } finally {
+              completed++;
+              if (!cancelled) setLoadProgress(completed / totalJobs);
             }
-          }
+          })
+        );
 
-          ownedTokensRef.current = allOwned;
-          loadedKey.current = currentKey;
-
-          if (!showCreated) {
-            if (!cancelled) { setTokens(allOwned); setLoadProgress(1); }
-          }
-        } catch (err) {
-          if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load tokens');
-        }
+        if (!cancelled) loadedKey.current = currentKey;
       }
 
       if (showCreated && createdLoadedKey.current !== addressKey) {
@@ -135,5 +143,5 @@ export function useWalletData() {
 
     load();
     return () => { cancelled = true; };
-  }, [evmAddresses, walletLoaded, activeChains, useNewest, showCreated, setTokens, setLoading, setLoadProgress, setError]);
+  }, [evmAddresses, walletLoaded, activeChains, useNewest, showCreated, setTokens, appendTokens, setLoading, setLoadProgress, setError]);
 }
