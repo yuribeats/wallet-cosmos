@@ -28,38 +28,52 @@ async function queryIndexSupply(
   signatures: string,
   chainIds: number[]
 ): Promise<QueryRow[]> {
-  try {
-    const params = new URLSearchParams({
-      query: sql,
-      signatures,
-      event_signatures: signatures,
-    });
-    for (const id of chainIds) {
-      params.append('chain', String(id));
-    }
-
-    const url = `https://api.indexsupply.net/v2/query?${params.toString()}`;
-    const res = await fetch(url);
-    if (!res.ok) return [];
-
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return [];
-
-    const block = data[0];
-    const rawColumns: Array<string | { name: string }> = block.columns || [];
-    const columns: string[] = rawColumns.map((c) => typeof c === 'string' ? c : c.name);
-    const rows: Array<Array<string | number>> = block.rows || [];
-
-    return rows.map((row) => {
-      const obj: QueryRow = {};
-      for (let i = 0; i < columns.length; i++) {
-        obj[columns[i]] = row[i];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const params = new URLSearchParams({
+        query: sql,
+        signatures,
+        event_signatures: signatures,
+      });
+      for (const id of chainIds) {
+        params.append('chain', String(id));
       }
-      return obj;
-    });
-  } catch {
-    return [];
+
+      const url = `https://api.indexsupply.net/v2/query?${params.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (attempt === 0) continue;
+        return [];
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) return [];
+
+      const block = data[0];
+      const rawColumns: Array<string | { name: string }> = block.columns || [];
+      const columns: string[] = rawColumns.map((c) => typeof c === 'string' ? c : c.name);
+      const rows: Array<Array<string | number>> = block.rows || [];
+
+      return rows.map((row) => {
+        const obj: QueryRow = {};
+        for (let i = 0; i < columns.length; i++) {
+          obj[columns[i]] = row[i];
+        }
+        return obj;
+      });
+    } catch {
+      if (attempt === 0) continue;
+      return [];
+    }
   }
+  return [];
+}
+
+export interface DiscoveredContract {
+  contract: string;
+  chain: ChainKey;
+  name?: string;
+  symbol?: string;
 }
 
 export async function discoverCreatedTokens(
@@ -145,6 +159,24 @@ export async function discoverCreatedTokens(
         const chain = ID_TO_CHAIN[Number(row.chain)];
         if (!chain) continue;
         addToken({ contract: String(row.address).toLowerCase(), tokenId: String(row.tokenid), chain });
+      }
+    },
+  });
+
+  queries.push({
+    sig: 'CollectionCreated(address indexed collectionContract, address indexed creator, uint256 indexed version, string name, string symbol, uint256 nonce)',
+    sql: `select chain, collectioncontract, creator, name, symbol from collectioncreated where creator = ${addr} and chain in (${chainList}) limit 200`,
+    parse: (rows) => {
+      for (const row of rows) {
+        const chain = ID_TO_CHAIN[Number(row.chain)];
+        if (!chain) continue;
+        addToken({
+          contract: String(row.collectioncontract).toLowerCase(),
+          tokenId: '1',
+          chain,
+          name: row.name ? String(row.name) : undefined,
+          symbol: row.symbol ? String(row.symbol) : undefined,
+        });
       }
     },
   });

@@ -4,6 +4,17 @@ import { resolveMedia } from './mediaUtils';
 import type { UnifiedToken, WalletConnection } from './types';
 import { discoverCreatedTokens } from './indexsupply';
 
+async function retry<T>(fn: () => Promise<T>, attempts = 2, delay = 500): Promise<T> {
+  for (let i = 0; i < attempts; i++) {
+    try { return await fn(); }
+    catch (err) {
+      if (i === attempts - 1) throw err;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw new Error('retry exhausted');
+}
+
 function getClient(chain: ChainKey): Alchemy {
   const networkMap: Record<ChainKey, Network> = {
     ethereum: Network.ETH_MAINNET,
@@ -45,7 +56,7 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
         nextPageKey = fallback.pageKey;
 
         const enriched = await Promise.allSettled(
-          fallback.ownedNfts.map((n) => client.nft.getNftMetadata(n.contractAddress, n.tokenId))
+          fallback.ownedNfts.map((n) => retry(() => client.nft.getNftMetadata(n.contractAddress, n.tokenId)))
         );
         for (const result of enriched) {
           if (result.status === 'fulfilled') {
@@ -200,7 +211,7 @@ export async function fetchNewestForChain(chain: ChainKey, wallet: string, limit
   }
 
   const metadataResults = await Promise.allSettled(
-    transferList.map((t) => client.nft.getNftMetadata(t.contract, t.tokenId))
+    transferList.map((t) => retry(() => client.nft.getNftMetadata(t.contract, t.tokenId)))
   );
 
   const tokens: UnifiedToken[] = [];
@@ -302,45 +313,43 @@ export async function fetchCreatedNfts(wallet?: string, chainFilter?: ChainKey, 
   const addr = wallet || DEFAULT_WALLET;
   const discovered = await discoverCreatedTokens(addr, chainFilter);
 
-  const byChain = new Map<ChainKey, typeof discovered>();
+  const contractsByChain = new Map<ChainKey, Set<string>>();
   for (const d of discovered) {
-    const list = byChain.get(d.chain) || [];
-    list.push(d);
-    byChain.set(d.chain, list);
+    const set = contractsByChain.get(d.chain) || new Set();
+    set.add(d.contract);
+    contractsByChain.set(d.chain, set);
   }
 
   const allTokens: UnifiedToken[] = [];
+  const seenIds = new Set<string>();
 
   const chainResults = await Promise.allSettled(
-    Array.from(byChain.entries()).map(async ([chain, items]) => {
+    Array.from(contractsByChain.entries()).map(async ([chain, contracts]) => {
       const client = getClient(chain);
-      const metaResults = await Promise.allSettled(
-        items.map((d) => client.nft.getNftMetadata(d.contract, d.tokenId))
+      const tokens: UnifiedToken[] = [];
+
+      const contractResults = await Promise.allSettled(
+        Array.from(contracts).map(async (contract) => {
+          const response = await retry(() =>
+            client.nft.getNftsForContract(contract, { pageSize: 50 })
+          );
+          const nfts = response.nfts as unknown as Array<Record<string, unknown>>;
+          for (const nft of nfts) {
+            const token = nftToToken(nft, chain);
+            if (!seenIds.has(token.id)) {
+              seenIds.add(token.id);
+              tokens.push({ ...token, createdByWallet: true, creationSource: 'minted' });
+            }
+          }
+        })
       );
 
-      const tokens: UnifiedToken[] = [];
-      for (let i = 0; i < items.length; i++) {
-        const d = items[i];
-        const meta = metaResults[i];
-
-        if (meta.status === 'fulfilled') {
-          const token = nftToToken(meta.value as unknown as Record<string, unknown>, chain);
-          tokens.push({ ...token, createdByWallet: true, creationSource: 'minted' });
-        } else {
-          tokens.push({
-            id: `${chain}-${d.contract}-${d.tokenId}`,
-            chain,
-            contractAddress: d.contract,
-            tokenId: d.tokenId,
-            standard: 'ERC1155',
-            name: d.name || d.symbol || `Token ${d.tokenId}`,
-            description: d.symbol ? `${d.symbol} coin` : undefined,
-            media: { mediaType: 'unknown' },
-            createdByWallet: true,
-            creationSource: 'minted',
-          });
+      for (const r of contractResults) {
+        if (r.status === 'rejected') {
+          console.error('Contract fetch failed:', r.reason);
         }
       }
+
       return tokens;
     })
   );
