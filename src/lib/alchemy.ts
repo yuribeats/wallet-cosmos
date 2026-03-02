@@ -312,28 +312,101 @@ export async function fetchNewestNfts(wallet?: string, limit: number = 100, chai
   return tokens.slice(0, limit);
 }
 
+async function fetchMintsViaTransfers(chain: ChainKey, wallet: string): Promise<Array<{ contract: string; tokenId: string }>> {
+  const url = `https://${CHAIN_RPC[chain]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
+  const mints: Array<{ contract: string; tokenId: string }> = [];
+  const seen = new Set<string>();
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'alchemy_getAssetTransfers',
+        params: [{
+          fromAddress: '0x0000000000000000000000000000000000000000',
+          toAddress: wallet,
+          category: ['erc721', 'erc1155'],
+          order: 'desc',
+          withMetadata: true,
+          maxCount: '0x1F4',
+        }],
+      }),
+    });
+    const data = await res.json();
+    const transfers = data.result?.transfers || [];
+
+    for (const t of transfers) {
+      const contract = (t.rawContract?.address as string)?.toLowerCase();
+      const rawId = t.erc721TokenId || t.tokenId || t.erc1155Metadata?.[0]?.tokenId;
+      if (!contract || !rawId) continue;
+      const decId = BigInt(rawId).toString();
+      const key = `${contract}-${decId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      mints.push({ contract, tokenId: decId });
+    }
+  } catch { /* transfer fetch failed */ }
+
+  return mints;
+}
+
 export async function fetchMintedNfts(chain: ChainKey, wallet: string, limit: number = 0): Promise<UnifiedToken[]> {
   const client = getClient(chain);
   const tokens: UnifiedToken[] = [];
-  let pageKey: string | undefined;
+  const seen = new Set<string>();
 
-  do {
-    try {
-      const response = await client.nft.getMintedNfts(wallet, { pageKey });
-      const results = await Promise.allSettled(
-        response.nfts.map((nft) => nftToToken(nft as unknown as Record<string, unknown>, chain))
+  const [sdkResult, transferMints] = await Promise.allSettled([
+    (async () => {
+      const result: UnifiedToken[] = [];
+      let pageKey: string | undefined;
+      do {
+        const response = await client.nft.getMintedNfts(wallet, { pageKey });
+        const metaResults = await Promise.allSettled(
+          response.nfts.map((nft) => nftToToken(nft as unknown as Record<string, unknown>, chain))
+        );
+        for (const r of metaResults) {
+          if (r.status === 'fulfilled') result.push(r.value);
+        }
+        pageKey = response.pageKey;
+        if (limit > 0 && result.length >= limit) break;
+      } while (pageKey);
+      return result;
+    })(),
+    fetchMintsViaTransfers(chain, wallet),
+  ]);
+
+  if (sdkResult.status === 'fulfilled') {
+    for (const t of sdkResult.value) {
+      if (!seen.has(t.id)) {
+        seen.add(t.id);
+        tokens.push({ ...t, createdByWallet: true, creationSource: 'minted' });
+      }
+    }
+  }
+
+  if (transferMints.status === 'fulfilled' && transferMints.value.length > 0) {
+    const missing = transferMints.value.filter((m) => !seen.has(`${chain}-${m.contract}-${m.tokenId}`));
+    if (missing.length > 0) {
+      const metaResults = await Promise.allSettled(
+        missing.map((m) => client.nft.getNftMetadata(m.contract, m.tokenId))
       );
-      for (const r of results) {
-        if (r.status === 'fulfilled') {
+      const tokenResults = await Promise.allSettled(
+        metaResults.map((r) => {
+          if (r.status !== 'fulfilled') return Promise.reject();
+          return nftToToken(r.value as unknown as Record<string, unknown>, chain);
+        })
+      );
+      for (const r of tokenResults) {
+        if (r.status === 'fulfilled' && !seen.has(r.value.id)) {
+          seen.add(r.value.id);
           tokens.push({ ...r.value, createdByWallet: true, creationSource: 'minted' });
         }
       }
-      if (limit > 0 && tokens.length >= limit) break;
-      pageKey = response.pageKey;
-    } catch {
-      break;
     }
-  } while (pageKey);
+  }
 
   return limit > 0 ? tokens.slice(0, limit) : tokens;
 }

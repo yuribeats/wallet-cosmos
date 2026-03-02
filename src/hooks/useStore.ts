@@ -54,7 +54,8 @@ export const useStore = create<WalletStore>((set, get) => ({
     newestCount: typeof window !== 'undefined' && window.innerWidth < 768 ? 50 : 100,
     thumbnailSize: typeof window !== 'undefined' && window.innerWidth < 768 ? 0.21 : 0.1,
     gridCols: typeof window !== 'undefined' && window.innerWidth < 768 ? 5 : 0,
-    viewMode: 'owned',
+    showOwned: true,
+    showCreated: false,
   },
   selectedToken: null,
   isLoading: false,
@@ -104,8 +105,10 @@ export const useStore = create<WalletStore>((set, get) => ({
     const { tokens, filters } = get();
     let filtered = tokens;
 
-    if (filters.viewMode === 'created') {
-      filtered = filtered.filter((t) => t.createdByWallet === true);
+    if (filters.showOwned && !filters.showCreated) {
+      filtered = filtered.filter((t) => t.isOwned);
+    } else if (filters.showCreated && !filters.showOwned) {
+      filtered = filtered.filter((t) => t.createdByWallet);
     }
 
     filtered = filtered.filter((t) => t.media.thumbnail || t.media.image);

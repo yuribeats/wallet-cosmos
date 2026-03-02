@@ -25,6 +25,7 @@ export interface UnifiedToken {
   acquiredAt?: string;
   mintedAt?: string;
 
+  isOwned?: boolean;
   createdByWallet?: boolean;
   creationSource?: 'minted' | 'contract_deployer' | 'owned_deployer_match';
 
@@ -51,5 +52,6 @@ export type FilterState = {
   newestCount: number;
   thumbnailSize: number;
   gridCols: number;
-  viewMode: 'owned' | 'created' | 'all';
+  showOwned: boolean;
+  showCreated: boolean;
 };
