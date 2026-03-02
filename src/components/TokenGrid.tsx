@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { CHAINS, type ChainKey } from '@/lib/constants';
 import type { UnifiedToken } from '@/lib/types';
@@ -13,6 +13,10 @@ interface TokenGridProps {
 function TokenCard({ token, onSelect }: { token: UnifiedToken; onSelect: (t: UnifiedToken) => void }) {
   const chain = CHAINS[token.chain as ChainKey];
   const imageUrl = token.media.thumbnail || token.media.image;
+  const videoUrl = token.media.video;
+  const isVideo = token.media.mediaType === 'video';
+  const [imgFailed, setImgFailed] = useState(false);
+  const onImgError = useCallback(() => setImgFailed(true), []);
 
   return (
     <div
@@ -26,11 +30,26 @@ function TokenCard({ token, onSelect }: { token: UnifiedToken; onSelect: (t: Uni
         cursor: 'crosshair',
       }}
     >
-      {imageUrl ? (
+      {isVideo && videoUrl && (!imageUrl || imgFailed) ? (
+        <video
+          src={videoUrl}
+          muted
+          loop
+          playsInline
+          autoPlay
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+      ) : imageUrl && !imgFailed ? (
         <img
           src={imageUrl}
           alt={token.name}
           loading="lazy"
+          onError={onImgError}
           style={{
             width: '100%',
             height: '100%',
