@@ -79,8 +79,6 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
       const deployer = (contract?.contractDeployer as string) || undefined;
       const isDeployerMatch = deployer && wallet.toLowerCase() === deployer.toLowerCase();
       const mint = (nft as Record<string, unknown>).mint as { mintAddress?: string; timestamp?: string } | undefined;
-      const isMintedByWallet = nft.tokenType !== 'ERC1155' && mint?.mintAddress && wallet.toLowerCase() === mint.mintAddress.toLowerCase();
-      const isCreated = isDeployerMatch || isMintedByWallet;
 
       tokens.push({
         id: `${chain}-${contract?.address || ''}-${nft.tokenId || ''}`,
@@ -99,7 +97,7 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
         lastUpdated: nft.timeLastUpdated as string | undefined,
         acquiredAt: ((nft as Record<string, unknown>).acquiredAt as { blockTimestamp?: string } | undefined)?.blockTimestamp || undefined,
         mintedAt: mint?.timestamp || undefined,
-        ...(isCreated ? { createdByWallet: true, creationSource: isDeployerMatch ? 'owned_deployer_match' as const : 'minted' as const } : {}),
+        ...(isDeployerMatch ? { createdByWallet: true, creationSource: 'owned_deployer_match' as const } : {}),
       });
     }
 
