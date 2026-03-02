@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { isEvmAddress } from '@/lib/constants';
+
+const STORAGE_KEY = 'wallet-cosmos-wallets';
 
 function isEnsName(value: string): boolean {
   return value.includes('.') && !value.startsWith('0x');
@@ -18,6 +20,19 @@ export default function WalletInput() {
   const [resolving, setResolving] = useState(false);
   const [wallets, setWallets] = useState<string[]>([]);
   const loadWallets = useStore((s) => s.loadWallets);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isEvmAddress)) {
+          setWallets(parsed);
+          loadWallets(parsed);
+        }
+      }
+    } catch {}
+  }, [loadWallets]);
 
   async function handleAdd() {
     const input = value.trim();
@@ -69,6 +84,7 @@ export default function WalletInput() {
 
   function handleLoad() {
     if (wallets.length === 0) return;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(wallets)); } catch {}
     loadWallets(wallets);
   }
 
