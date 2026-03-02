@@ -133,151 +133,23 @@ function nftToToken(nft: Record<string, unknown>, chain: ChainKey, mintedAt?: st
   };
 }
 
-const CHAIN_RPC: Record<ChainKey, string> = {
-  ethereum: 'eth-mainnet',
-  base: 'base-mainnet',
-  optimism: 'opt-mainnet',
-  zora: 'zora-mainnet',
-};
-
-async function fetchTransfersRaw(chain: ChainKey, wallet: string, maxCount: number) {
-  const url = `https://${CHAIN_RPC[chain]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'alchemy_getAssetTransfers',
-      params: [{
-        toAddress: wallet,
-        category: ['erc721', 'erc1155'],
-        order: 'desc',
-        withMetadata: true,
-        maxCount: `0x${maxCount.toString(16)}`,
-      }],
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  return data.result?.transfers || [];
-}
-
 export async function fetchNewestForChain(chain: ChainKey, wallet: string, limit: number = 100): Promise<UnifiedToken[]> {
-  const client = getClient(chain);
+  const tokens = await fetchNftsForChain(chain, wallet, limit);
 
-  const transfers = await fetchTransfersRaw(chain, wallet, limit * 2);
+  tokens.sort((a, b) => {
+    const ta = a.acquiredAt ? new Date(a.acquiredAt).getTime() : a.mintedAt ? new Date(a.mintedAt).getTime() : 0;
+    const tb = b.acquiredAt ? new Date(b.acquiredAt).getTime() : b.mintedAt ? new Date(b.mintedAt).getTime() : 0;
+    return tb - ta;
+  });
 
-  let latestBlock: number | null = null;
-  let now: number | null = null;
-
-  const seen = new Set<string>();
-  const transferList: Array<{ contract: string; tokenId: string; timestamp: string }> = [];
-
-  for (const t of transfers) {
-    const contract = (t.rawContract?.address as string)?.toLowerCase();
-    const rawId = t.erc721TokenId || t.tokenId || t.erc1155Metadata?.[0]?.tokenId;
-    if (!contract || !rawId) continue;
-
-    const decId = BigInt(rawId).toString();
-    const key = `${contract}-${decId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    let timestamp = t.metadata?.blockTimestamp || '';
-
-    if (!timestamp && t.blockNum) {
-      if (latestBlock === null) {
-        try {
-          latestBlock = await client.core.getBlockNumber();
-        } catch {
-          const url = `https://${CHAIN_RPC[chain]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
-          const blockRes = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
-          });
-          const blockData = await blockRes.json();
-          latestBlock = parseInt(blockData.result, 16);
-        }
-        now = Date.now();
-      }
-      const blockNum = parseInt(t.blockNum, 16);
-      timestamp = new Date(now! - (latestBlock - blockNum) * 1000).toISOString();
-    }
-
-    transferList.push({ contract, tokenId: decId, timestamp });
-    if (transferList.length >= limit) break;
-  }
-
-  const metadataResults = await Promise.allSettled(
-    transferList.map((t) => retry(() => client.nft.getNftMetadata(t.contract, t.tokenId)))
-  );
-
-  const tokens: UnifiedToken[] = [];
-  for (let i = 0; i < metadataResults.length; i++) {
-    const r = metadataResults[i];
-    if (r.status === 'fulfilled') {
-      tokens.push(nftToToken(r.value as unknown as Record<string, unknown>, chain, transferList[i].timestamp));
-    }
-  }
-
-  return tokens;
-}
-
-async function buildDateMap(chain: ChainKey, wallet: string): Promise<Map<string, string>> {
-  const dateMap = new Map<string, string>();
-  try {
-    const transfers = await fetchTransfersRaw(chain, wallet, 1000);
-    let latestBlock: number | null = null;
-    let now: number | null = null;
-
-    for (const t of transfers) {
-      const contract = (t.rawContract?.address as string)?.toLowerCase();
-      const rawId = t.erc721TokenId || t.tokenId || t.erc1155Metadata?.[0]?.tokenId;
-      if (!contract || !rawId) continue;
-
-      const decId = BigInt(rawId).toString();
-      const key = `${contract}-${decId}`;
-      if (dateMap.has(key)) continue;
-
-      let timestamp = t.metadata?.blockTimestamp || '';
-      if (!timestamp && t.blockNum) {
-        if (latestBlock === null) {
-          const url = `https://${CHAIN_RPC[chain]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
-          const blockRes = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
-          });
-          const blockData = await blockRes.json();
-          latestBlock = parseInt(blockData.result, 16);
-          now = Date.now();
-        }
-        const blockNum = parseInt(t.blockNum, 16);
-        timestamp = new Date(now! - (latestBlock - blockNum) * 1000).toISOString();
-      }
-      if (timestamp) dateMap.set(key, timestamp);
-    }
-  } catch { /* date enrichment is best-effort */ }
-  return dateMap;
+  return tokens.slice(0, limit);
 }
 
 export async function fetchAllNfts(wallet?: string, chainFilter?: ChainKey, limit: number = 0): Promise<UnifiedToken[]> {
   const addr = wallet || DEFAULT_WALLET;
   const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
   const results = await Promise.allSettled(
-    chains.map(async (c) => {
-      const [tokens, dateMap] = await Promise.all([
-        fetchNftsForChain(c, addr, limit),
-        buildDateMap(c, addr),
-      ]);
-      return tokens.map((t) => {
-        const key = `${t.contractAddress.toLowerCase()}-${t.tokenId || ''}`;
-        const ts = dateMap.get(key);
-        return ts ? { ...t, mintedAt: ts } : t;
-      });
-    })
+    chains.map((c) => fetchNftsForChain(c, addr, limit))
   );
 
   const tokens: UnifiedToken[] = [];
