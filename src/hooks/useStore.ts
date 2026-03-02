@@ -48,7 +48,7 @@ export const useStore = create<WalletStore>((set, get) => ({
   tokens: [],
   connections: [],
   filters: {
-    standards: ['ERC1155'],
+    standards: ['ERC721', 'ERC1155'],
     mediaTypes: [],
     layout: 'grid',
     useNewest: true,
@@ -183,9 +183,10 @@ export const useStore = create<WalletStore>((set, get) => ({
 
     const seen = new Set<string>();
     filtered = filtered.filter((t) => {
-      const mediaUrl = t.media.image || t.media.thumbnail || '';
-      if (!mediaUrl || !t.collectionName) return true;
-      const key = `${t.collectionName}::${mediaUrl}`;
+      if (!t.collectionName) return true;
+      const originalUrl = (t.rawMetadata?.image as string) || (t.rawMetadata?.animation_url as string) || '';
+      if (!originalUrl) return true;
+      const key = `${t.collectionName}::${originalUrl}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
