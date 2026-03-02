@@ -181,6 +181,16 @@ export const useStore = create<WalletStore>((set, get) => ({
       );
     }
 
+    const seen = new Set<string>();
+    filtered = filtered.filter((t) => {
+      const mediaUrl = t.media.image || t.media.thumbnail || '';
+      if (!mediaUrl || !t.collectionName) return true;
+      const key = `${t.collectionName}::${mediaUrl}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     return filtered;
   },
 }));
