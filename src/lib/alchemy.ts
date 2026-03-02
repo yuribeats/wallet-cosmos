@@ -4,6 +4,12 @@ import { resolveMedia } from './mediaUtils';
 import type { UnifiedToken, WalletConnection } from './types';
 import { discoverCreatedTokens } from './indexsupply';
 
+const CREATOR_FACTORIES = new Set([
+  '0x3b612a5b49e025a6e4ba4ee4fb1ef46d13588059', // Foundation Collection Factory
+  '0x7f09d2be32e8e320fce3c824b45ca0cd870099a6', // Foundation (older)
+  '0x2a3d7d1d5a75a23b74e95b1853f96a5f4c39aa51', // Foundation (v1)
+]);
+
 async function retry<T>(fn: () => Promise<T>, attempts = 2, delay = 500): Promise<T> {
   for (let i = 0; i < attempts; i++) {
     try { return await fn(); }
@@ -77,8 +83,13 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
       const media = resolveMedia(metadata, image);
 
       const deployer = (contract?.contractDeployer as string) || undefined;
-      const isDeployerMatch = deployer && wallet.toLowerCase() === deployer.toLowerCase();
+      const deployerLower = deployer?.toLowerCase();
+      const isDeployerMatch = deployerLower && wallet.toLowerCase() === deployerLower;
       const mint = (nft as Record<string, unknown>).mint as { mintAddress?: string; timestamp?: string } | undefined;
+      const isFactoryCreated = nft.tokenType !== 'ERC1155'
+        && deployerLower && CREATOR_FACTORIES.has(deployerLower)
+        && mint?.mintAddress && wallet.toLowerCase() === mint.mintAddress.toLowerCase();
+      const isCreated = isDeployerMatch || isFactoryCreated;
 
       tokens.push({
         id: `${chain}-${contract?.address || ''}-${nft.tokenId || ''}`,
@@ -97,7 +108,7 @@ export async function fetchNftsForChain(chain: ChainKey, wallet: string, limit: 
         lastUpdated: nft.timeLastUpdated as string | undefined,
         acquiredAt: ((nft as Record<string, unknown>).acquiredAt as { blockTimestamp?: string } | undefined)?.blockTimestamp || undefined,
         mintedAt: mint?.timestamp || undefined,
-        ...(isDeployerMatch ? { createdByWallet: true, creationSource: 'owned_deployer_match' as const } : {}),
+        ...(isCreated ? { createdByWallet: true, creationSource: isDeployerMatch ? 'owned_deployer_match' as const : 'minted' as const } : {}),
       });
     }
 
