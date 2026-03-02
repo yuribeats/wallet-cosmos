@@ -95,10 +95,10 @@ export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
   ) as string | undefined;
   const metadataImage = rawMetadata?.image as string | undefined;
 
-  const originalImageUrl = resolveUrl(image?.originalUrl) || resolveUrl(metadataImage);
-  const resolvedImage = resolveUrl(image?.cachedUrl) || originalImageUrl;
+  const resolvedImage = resolveUrl(image?.cachedUrl) || resolveUrl(image?.originalUrl) || resolveUrl(metadataImage);
   const resolvedThumbnail = resolveUrl(image?.thumbnailUrl) || resolvedImage;
   const resolvedAnimation = resolveUrl(animationUrl);
+  const originalContentUrl = metadataImage || (animationUrl as string | undefined);
 
   let mediaType: MediaType;
 
@@ -122,7 +122,7 @@ export function resolveMedia(rawMetadata?: Record<string, unknown>, image?: {
     video: mediaType === 'video' ? (resolvedAnimation || resolvedImage) : undefined,
     audio: mediaType === 'audio' ? resolvedAnimation : undefined,
     model: mediaType === 'model' ? (resolvedAnimation || resolvedImage) : undefined,
-    originalUrl: originalImageUrl || resolvedAnimation,
+    originalUrl: originalContentUrl,
     mediaType,
   };
 }

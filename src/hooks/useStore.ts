@@ -183,10 +183,11 @@ export const useStore = create<WalletStore>((set, get) => ({
 
     const seen = new Set<string>();
     filtered = filtered.filter((t) => {
-      if (!t.collectionName) return true;
       const url = t.media.originalUrl || '';
       if (!url) return true;
-      const key = `${t.collectionName}::${url}`;
+      const cidMatch = url.match(/(?:ipfs:\/\/|\/ipfs\/)([a-zA-Z0-9]+)/);
+      const normalized = cidMatch ? cidMatch[1] : url;
+      const key = `${t.contractAddress}::${normalized}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
