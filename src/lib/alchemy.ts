@@ -184,52 +184,15 @@ export async function fetchNewestNfts(wallet?: string, limit: number = 100, chai
   return tokens.slice(0, limit);
 }
 
-async function discoverMintedERC721Contracts(chain: ChainKey, wallet: string): Promise<string[]> {
-  const client = getClient(chain);
-  const contracts = new Set<string>();
-  try {
-    const response = await retry(() =>
-      client.core.getAssetTransfers({
-        fromAddress: '0x0000000000000000000000000000000000000000',
-        toAddress: wallet,
-        category: ['erc721' as never],
-        maxCount: 100,
-      })
-    );
-    for (const tx of response.transfers) {
-      const addr = (tx as unknown as Record<string, unknown>).rawContract as { address?: string } | undefined;
-      if (addr?.address) contracts.add(addr.address.toLowerCase());
-    }
-  } catch {}
-  return Array.from(contracts);
-}
-
 export async function fetchCreatedNfts(wallet?: string, chainFilter?: ChainKey, limit: number = 0): Promise<UnifiedToken[]> {
   const addr = wallet || DEFAULT_WALLET;
-  const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
-
-  const [discovered, ...mintResults] = await Promise.allSettled([
-    discoverCreatedTokens(addr, chainFilter),
-    ...chains.map((c) => discoverMintedERC721Contracts(c, addr)),
-  ]);
+  const discovered = await discoverCreatedTokens(addr, chainFilter);
 
   const contractsByChain = new Map<ChainKey, Set<string>>();
-
-  if (discovered.status === 'fulfilled') {
-    for (const d of discovered.value) {
-      const set = contractsByChain.get(d.chain) || new Set();
-      set.add(d.contract);
-      contractsByChain.set(d.chain, set);
-    }
-  }
-
-  for (let i = 0; i < chains.length; i++) {
-    const r = mintResults[i];
-    if (r.status === 'fulfilled') {
-      const set = contractsByChain.get(chains[i]) || new Set();
-      for (const c of r.value) set.add(c);
-      contractsByChain.set(chains[i], set);
-    }
+  for (const d of discovered) {
+    const set = contractsByChain.get(d.chain) || new Set();
+    set.add(d.contract);
+    contractsByChain.set(d.chain, set);
   }
 
   const allTokens: UnifiedToken[] = [];
