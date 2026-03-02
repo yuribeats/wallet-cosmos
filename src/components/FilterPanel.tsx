@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
 import type { ChainKey } from '@/lib/constants';
+import { filtersToParams } from '@/lib/urlFilters';
 
 const STANDARDS = ['ERC721', 'ERC1155'];
 const MEDIA_TYPES = ['image', 'video', 'audio'];
@@ -71,8 +72,10 @@ export default function FilterPanel() {
   const setFilter = useStore((s) => s.setFilter);
   const activeChain = useStore((s) => s.activeChain);
   const setActiveChain = useStore((s) => s.setActiveChain);
+  const evmAddress = useStore((s) => s.evmAddress);
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
+  const [copied, setCopied] = useState(false);
 
 
   function toggleArrayFilter(key: 'standards' | 'mediaTypes', value: string) {
@@ -428,6 +431,34 @@ export default function FilterPanel() {
             boxSizing: 'border-box',
           }}
         />
+      </div>
+
+      <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+        <button
+          onClick={() => {
+            const qs = filtersToParams(filters, evmAddress, activeChain);
+            const url = `${window.location.origin}${window.location.pathname}?${qs}`;
+            navigator.clipboard.writeText(url).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+          style={{
+            width: '100%',
+            background: copied ? 'rgba(34, 139, 34, 0.25)' : 'transparent',
+            border: `1px solid ${copied ? '#228B22' : 'rgba(255,255,255,0.15)'}`,
+            color: copied ? '#228B22' : '#fff',
+            padding: '8px',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            fontFamily: 'inherit',
+            textTransform: 'uppercase',
+            cursor: 'crosshair',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {copied ? 'COPIED TO CLIPBOARD' : 'SHARE THIS VIEW'}
+        </button>
       </div>
 
     </div>

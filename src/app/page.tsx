@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useWalletData } from '@/hooks/useWalletData';
 import { useStore } from '@/hooks/useStore';
+import { paramsToState } from '@/lib/urlFilters';
 import FilterPanel from '@/components/FilterPanel';
 import TokenDetail from '@/components/TokenDetail';
 import HUD from '@/components/HUD';
@@ -39,6 +40,27 @@ export default function Home() {
 
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [SceneComponent, setSceneComponent] = useState<React.ComponentType | null>(null);
+  const urlApplied = useRef(false);
+
+  useEffect(() => {
+    if (urlApplied.current) return;
+    urlApplied.current = true;
+    const result = paramsToState(window.location.search);
+    if (!result) return;
+
+    const { wallet, chain, filters: urlFilters } = result;
+    const store = useStore.getState();
+
+    if (urlFilters) {
+      for (const [key, value] of Object.entries(urlFilters)) {
+        store.setFilter(key as keyof typeof urlFilters, value as never);
+      }
+    }
+    if (chain) store.setActiveChain(chain);
+    if (wallet) store.loadWallet(wallet);
+
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
 
   useEffect(() => {
     const supported = hasWebGL();
