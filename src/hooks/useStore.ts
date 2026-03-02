@@ -13,7 +13,7 @@ interface WalletStore {
   loadProgress: number;
   error: string | null;
 
-  evmAddress: string;
+  evmAddresses: string[];
   walletLoaded: boolean;
 
   activeChain: ChainKey;
@@ -30,7 +30,10 @@ interface WalletStore {
   setLoading: (loading: boolean) => void;
   setLoadProgress: (progress: number) => void;
   setError: (error: string | null) => void;
+  loadWallets: (addresses: string[]) => void;
   loadWallet: (evm: string) => void;
+  addWallet: (address: string) => void;
+  removeWallet: (address: string) => void;
   setActiveChain: (chain: ChainKey) => void;
   getFilteredTokens: () => UnifiedToken[];
   openPlaylist: () => void;
@@ -56,13 +59,14 @@ export const useStore = create<WalletStore>((set, get) => ({
     gridCols: typeof window !== 'undefined' && window.innerWidth < 768 ? 5 : 0,
     showOwned: true,
     showCreated: false,
+    selectedWallets: [],
   },
   selectedToken: null,
   isLoading: false,
   loadProgress: 0,
   error: null,
 
-  evmAddress: '',
+  evmAddresses: [],
   walletLoaded: false,
 
   activeChain: 'base',
@@ -80,8 +84,30 @@ export const useStore = create<WalletStore>((set, get) => ({
   setLoading: (loading) => set({ isLoading: loading }),
   setLoadProgress: (progress) => set({ loadProgress: progress }),
   setError: (error) => set({ error }),
-  loadWallet: (evm) =>
-    set({ evmAddress: evm, walletLoaded: true, tokens: [], connections: [], error: null, selectedToken: null, loadProgress: 0 }),
+
+  loadWallets: (addresses) =>
+    set({ evmAddresses: addresses, walletLoaded: true, tokens: [], connections: [], error: null, selectedToken: null, loadProgress: 0 }),
+
+  loadWallet: (evm) => get().loadWallets([evm]),
+
+  addWallet: (address) => {
+    const current = get().evmAddresses;
+    const lower = address.toLowerCase();
+    if (current.some((a) => a.toLowerCase() === lower)) return;
+    set({ evmAddresses: [...current, address] });
+  },
+
+  removeWallet: (address) => {
+    const lower = address.toLowerCase();
+    set((s) => ({
+      evmAddresses: s.evmAddresses.filter((a) => a.toLowerCase() !== lower),
+      tokens: s.tokens.filter((t) => t.sourceWallet?.toLowerCase() !== lower),
+      filters: {
+        ...s.filters,
+        selectedWallets: s.filters.selectedWallets.filter((w) => w.toLowerCase() !== lower),
+      },
+    }));
+  },
 
   setActiveChain: (chain) =>
     set({
@@ -104,6 +130,11 @@ export const useStore = create<WalletStore>((set, get) => ({
   getFilteredTokens: () => {
     const { tokens, filters } = get();
     let filtered = tokens;
+
+    if (filters.selectedWallets.length > 0) {
+      const walletSet = new Set(filters.selectedWallets.map((w) => w.toLowerCase()));
+      filtered = filtered.filter((t) => t.sourceWallet && walletSet.has(t.sourceWallet.toLowerCase()));
+    }
 
     if (filters.showOwned && !filters.showCreated) {
       filtered = filtered.filter((t) => t.isOwned);

@@ -2,90 +2,114 @@
 
 import { useEffect, useRef } from 'react';
 import { useStore } from './useStore';
-import { CHAIN_KEYS } from '@/lib/constants';
 import type { UnifiedToken } from '@/lib/types';
 
 export function useWalletData() {
-  const evmAddress = useStore((s) => s.evmAddress);
+  const evmAddresses = useStore((s) => s.evmAddresses);
   const walletLoaded = useStore((s) => s.walletLoaded);
   const activeChain = useStore((s) => s.activeChain);
   const useNewest = useStore((s) => s.filters.useNewest);
   const showCreated = useStore((s) => s.filters.showCreated);
   const setTokens = useStore((s) => s.setTokens);
-  const appendTokens = useStore((s) => s.appendTokens);
-  const setConnections = useStore((s) => s.setConnections);
   const setLoading = useStore((s) => s.setLoading);
   const setLoadProgress = useStore((s) => s.setLoadProgress);
   const setError = useStore((s) => s.setError);
 
-  const newestLoaded = useRef<string | null>(null);
-  const singleChainLoaded = useRef<string | null>(null);
-  const createdLoaded = useRef<string | null>(null);
+  const loadedKey = useRef<string | null>(null);
+  const createdLoadedKey = useRef<string | null>(null);
   const ownedTokensRef = useRef<UnifiedToken[]>([]);
 
   useEffect(() => {
-    if (!walletLoaded || !evmAddress) return;
+    if (!walletLoaded || evmAddresses.length === 0) return;
 
+    const addressKey = [...evmAddresses].sort().join(',') + ':' + activeChain;
     const needNewest = useNewest;
+    const currentKey = addressKey + (needNewest ? ':newest' : ':all');
 
-    if (needNewest && newestLoaded.current === activeChain && !showCreated) return;
-    if (!needNewest && singleChainLoaded.current === activeChain && !showCreated) return;
-    if (needNewest && newestLoaded.current === activeChain && showCreated && createdLoaded.current === activeChain) return;
-    if (!needNewest && singleChainLoaded.current === activeChain && showCreated && createdLoaded.current === activeChain) return;
+    const needOwnedFetch = loadedKey.current !== currentKey;
+    const needCreatedFetch = showCreated && createdLoadedKey.current !== addressKey;
+
+    if (!needOwnedFetch && !needCreatedFetch) return;
 
     let cancelled = false;
+
+    async function fetchForWallet(wallet: string, mode: 'owned' | 'created') {
+      const params: Record<string, string> = { wallet, chain: activeChain };
+      if (mode === 'created') {
+        params.mode = 'created';
+      } else if (needNewest) {
+        params.mode = 'newest';
+        params.limit = '200';
+      }
+      const res = await fetch(`/api/nfts?${new URLSearchParams(params)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch');
+      return ((data.tokens || []) as UnifiedToken[]).map((t: UnifiedToken) => ({
+        ...t,
+        sourceWallet: wallet,
+        ...(mode === 'owned' ? { isOwned: true } : {}),
+      }));
+    }
 
     async function load() {
       setLoading(true);
       setError(null);
       setLoadProgress(0);
 
-      const needOwnedFetch = needNewest
-        ? newestLoaded.current !== activeChain
-        : singleChainLoaded.current !== activeChain;
-
       if (needOwnedFetch) {
-        newestLoaded.current = null;
-        singleChainLoaded.current = null;
-        createdLoaded.current = null;
+        loadedKey.current = null;
+        createdLoadedKey.current = null;
 
         try {
-          const params: Record<string, string> = { wallet: evmAddress, chain: activeChain };
-          if (needNewest) { params.mode = 'newest'; params.limit = '200'; }
-          const res = await fetch(`/api/nfts?${new URLSearchParams(params)}`);
+          const results = await Promise.all(
+            evmAddresses.map((addr) => fetchForWallet(addr, 'owned'))
+          );
           if (cancelled) return;
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Failed to fetch');
-          const owned = ((data.tokens || []) as UnifiedToken[]).map((t: UnifiedToken) => ({ ...t, isOwned: true }));
-          ownedTokensRef.current = owned;
-          if (needNewest) newestLoaded.current = activeChain;
-          else singleChainLoaded.current = activeChain;
+
+          const allOwned: UnifiedToken[] = [];
+          const seen = new Set<string>();
+          for (const tokens of results) {
+            for (const t of tokens) {
+              if (!seen.has(t.id)) {
+                seen.add(t.id);
+                allOwned.push(t);
+              }
+            }
+          }
+
+          ownedTokensRef.current = allOwned;
+          loadedKey.current = currentKey;
 
           if (!showCreated) {
-            if (!cancelled) { setTokens(owned); setLoadProgress(1); }
+            if (!cancelled) { setTokens(allOwned); setLoadProgress(1); }
           }
         } catch (err) {
           if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load tokens');
         }
       }
 
-      if (showCreated && createdLoaded.current !== activeChain) {
+      if (showCreated && createdLoadedKey.current !== addressKey) {
         try {
-          const res = await fetch(`/api/nfts?${new URLSearchParams({ wallet: evmAddress, mode: 'created', chain: activeChain })}`);
+          const results = await Promise.all(
+            evmAddresses.map((addr) => fetchForWallet(addr, 'created'))
+          );
           if (cancelled) return;
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Failed to fetch created');
-          const created = (data.tokens || []) as UnifiedToken[];
-          createdLoaded.current = activeChain;
+
+          const allCreated: UnifiedToken[] = [];
+          for (const tokens of results) {
+            allCreated.push(...tokens);
+          }
+
+          createdLoadedKey.current = addressKey;
 
           const seen = new Set<string>();
           const merged: UnifiedToken[] = [];
           for (const t of ownedTokensRef.current) {
             seen.add(t.id);
-            const match = created.find((c) => c.id === t.id);
+            const match = allCreated.find((c) => c.id === t.id);
             merged.push(match ? { ...t, createdByWallet: true, creationSource: match.creationSource } : t);
           }
-          for (const t of created) {
+          for (const t of allCreated) {
             if (!seen.has(t.id)) merged.push(t);
           }
 
@@ -106,5 +130,5 @@ export function useWalletData() {
 
     load();
     return () => { cancelled = true; };
-  }, [evmAddress, walletLoaded, activeChain, useNewest, showCreated, setTokens, appendTokens, setConnections, setLoading, setLoadProgress, setError]);
+  }, [evmAddresses, walletLoaded, activeChain, useNewest, showCreated, setTokens, setLoading, setLoadProgress, setError]);
 }

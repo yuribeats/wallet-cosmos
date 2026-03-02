@@ -16,15 +16,16 @@ const PARAM_MAP = {
   gridCols: 'gc',
   showOwned: 'own',
   showCreated: 'crt',
+  selectedWallets: 'sw',
 } as const;
 
 export function filtersToParams(
   filters: FilterState,
-  wallet: string,
+  wallets: string[],
   chain: ChainKey
 ): string {
   const p = new URLSearchParams();
-  p.set('w', wallet);
+  p.set('w', wallets.join('|'));
   p.set('c', chain);
 
   p.set(PARAM_MAP.standards, filters.standards.join(','));
@@ -41,19 +42,23 @@ export function filtersToParams(
   if (filters.gridCols) p.set(PARAM_MAP.gridCols, String(filters.gridCols));
   p.set(PARAM_MAP.showOwned, filters.showOwned ? '1' : '0');
   p.set(PARAM_MAP.showCreated, filters.showCreated ? '1' : '0');
+  if (filters.selectedWallets.length > 0) p.set(PARAM_MAP.selectedWallets, filters.selectedWallets.join('|'));
 
   return p.toString();
 }
 
 export function paramsToState(search: string): {
-  wallet?: string;
+  wallets?: string[];
   chain?: ChainKey;
   filters?: Partial<FilterState>;
 } | null {
   const p = new URLSearchParams(search);
   if (!p.has('w')) return null;
 
-  const wallet = p.get('w') || undefined;
+  const wRaw = p.get('w') || '';
+  const wallets = wRaw.split('|').filter(Boolean);
+  if (wallets.length === 0) return null;
+
   const chain = (p.get('c') || undefined) as ChainKey | undefined;
 
   const filters: Partial<FilterState> = {};
@@ -100,5 +105,8 @@ export function paramsToState(search: string): {
   const crt = p.get(PARAM_MAP.showCreated);
   if (crt !== null) filters.showCreated = crt === '1';
 
-  return { wallet, chain, filters };
+  const sw = p.get(PARAM_MAP.selectedWallets);
+  if (sw) filters.selectedWallets = sw.split('|').filter(Boolean);
+
+  return { wallets, chain, filters };
 }

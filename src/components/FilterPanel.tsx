@@ -72,7 +72,7 @@ export default function FilterPanel() {
   const setFilter = useStore((s) => s.setFilter);
   const activeChain = useStore((s) => s.activeChain);
   const setActiveChain = useStore((s) => s.setActiveChain);
-  const evmAddress = useStore((s) => s.evmAddress);
+  const evmAddresses = useStore((s) => s.evmAddresses);
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -218,6 +218,32 @@ export default function FilterPanel() {
           />
         </div>
       </div>
+
+      {evmAddresses.length > 1 && (
+        <div style={{ marginBottom: '12px' }}>
+          <span style={labelStyle}>WALLETS</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+            {evmAddresses.map((addr) => (
+              <ToggleButton
+                key={addr}
+                active={filters.selectedWallets.length === 0 || filters.selectedWallets.some((w) => w.toLowerCase() === addr.toLowerCase())}
+                label={`${addr.slice(0, 6)}...${addr.slice(-4)}`}
+                onClick={() => {
+                  const current = filters.selectedWallets;
+                  const lower = addr.toLowerCase();
+                  const isSelected = current.some((w) => w.toLowerCase() === lower);
+                  if (isSelected) {
+                    const next = current.filter((w) => w.toLowerCase() !== lower);
+                    setFilter('selectedWallets', next);
+                  } else {
+                    setFilter('selectedWallets', [...current, addr]);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>VIEW</span>
@@ -436,7 +462,7 @@ export default function FilterPanel() {
       <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
         <button
           onClick={() => {
-            const qs = filtersToParams(filters, evmAddress, activeChain);
+            const qs = filtersToParams(filters, evmAddresses, activeChain);
             const url = `${window.location.origin}${window.location.pathname}?${qs}`;
             navigator.clipboard.writeText(url).then(() => {
               setCopied(true);

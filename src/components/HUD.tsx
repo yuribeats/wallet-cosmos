@@ -10,7 +10,7 @@ function truncate(addr: string) {
 export default function HUD() {
   const tokens = useStore((s) => s.tokens);
   const isLoading = useStore((s) => s.isLoading);
-  const evmAddress = useStore((s) => s.evmAddress);
+  const evmAddresses = useStore((s) => s.evmAddresses);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
   const filters = useStore((s) => s.filters);
   const filteredCount = useMemo(() => getFilteredTokens().length, [tokens, filters, getFilteredTokens]);
@@ -41,7 +41,7 @@ export default function HUD() {
         textTransform: 'uppercase',
         letterSpacing: '0.08em',
       }}>
-        {evmAddress && <span style={{ color: '#666' }}>{truncate(evmAddress)}</span>}
+        {evmAddresses.length > 0 && <span style={{ color: '#666' }}>{evmAddresses.length === 1 ? truncate(evmAddresses[0]) : `${evmAddresses.length} WALLETS`}</span>}
         <span style={{ margin: '0 8px', color: '#333' }}>|</span>
         <span>{isLoading ? 'LOADING...' : `${filteredCount} / ${tokens.length}`}</span>
       </div>

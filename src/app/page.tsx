@@ -48,7 +48,7 @@ export default function Home() {
     const result = paramsToState(window.location.search);
     if (!result) return;
 
-    const { wallet, chain, filters: urlFilters } = result;
+    const { wallets, chain, filters: urlFilters } = result;
     const store = useStore.getState();
 
     if (urlFilters) {
@@ -57,7 +57,7 @@ export default function Home() {
       }
     }
     if (chain) store.setActiveChain(chain);
-    if (wallet) store.loadWallet(wallet);
+    if (wallets && wallets.length > 0) store.loadWallets(wallets);
 
     window.history.replaceState({}, '', window.location.pathname);
   }, []);
