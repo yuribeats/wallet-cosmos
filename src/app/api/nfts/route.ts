@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchAllNfts, fetchNewestNfts } from '@/lib/alchemy';
+import { fetchAllNfts, fetchNewestNfts, fetchCreatedNfts } from '@/lib/alchemy';
 import type { ChainKey } from '@/lib/constants';
 
 export async function GET(request: NextRequest) {
@@ -11,6 +11,11 @@ export async function GET(request: NextRequest) {
   try {
     if (mode === 'newest') {
       const nfts = await fetchNewestNfts(wallet, limit || 100, chain || undefined);
+      return NextResponse.json({ tokens: nfts, count: nfts.length });
+    }
+
+    if (mode === 'created') {
+      const nfts = await fetchCreatedNfts(wallet, chain || undefined, limit);
       return NextResponse.json({ tokens: nfts, count: nfts.length });
     }
 

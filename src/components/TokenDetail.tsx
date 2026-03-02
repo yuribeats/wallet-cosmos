@@ -76,6 +76,28 @@ export default function TokenDetail({ token, onClose }: TokenDetailProps) {
         {token.name}
       </h2>
 
+      {token.createdByWallet && (
+        <div style={{
+          display: 'inline-block',
+          border: '1px solid #228B22',
+          color: '#228B22',
+          padding: '4px 10px',
+          fontSize: '10px',
+          fontWeight: 'bold',
+          fontFamily: 'inherit',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          marginBottom: '12px',
+        }}>
+          CREATED BY YOU
+          {token.creationSource && (
+            <span style={{ color: '#666', marginLeft: '8px' }}>
+              {token.creationSource === 'minted' ? 'MINTED' : token.creationSource === 'contract_deployer' ? 'CONTRACT OWNER' : 'DEPLOYER MATCH'}
+            </span>
+          )}
+        </div>
+      )}
+
       <div style={{ fontSize: mobile ? '11px' : '12px', lineHeight: '2', fontFamily: 'monospace', wordBreak: 'break-all' }}>
         {token.collectionName && (
           <div>

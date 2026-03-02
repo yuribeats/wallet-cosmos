@@ -201,6 +201,20 @@ export default function FilterPanel() {
       </div>
 
       <div style={{ marginBottom: '12px' }}>
+        <span style={labelStyle}>SOURCE</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+          {(['owned', 'created', 'all'] as const).map((mode) => (
+            <ToggleButton
+              key={mode}
+              active={filters.viewMode === mode}
+              label={mode.toUpperCase()}
+              onClick={() => setFilter('viewMode', mode)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '12px' }}>
         <span style={labelStyle}>VIEW</span>
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', marginRight: '4px', marginBottom: '4px' }}>
