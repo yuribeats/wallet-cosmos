@@ -2,6 +2,7 @@ import { Alchemy, Network, NftFilters } from 'alchemy-sdk';
 import { DEFAULT_WALLET, CHAIN_KEYS, type ChainKey } from './constants';
 import { resolveMedia } from './mediaUtils';
 import type { UnifiedToken, WalletConnection } from './types';
+import { discoverCreatedTokens } from './indexsupply';
 
 function getClient(chain: ChainKey): Alchemy {
   const networkMap: Record<ChainKey, Network> = {
@@ -312,169 +313,56 @@ export async function fetchNewestNfts(wallet?: string, limit: number = 100, chai
   return tokens.slice(0, limit);
 }
 
-async function fetchMintsViaTransfers(chain: ChainKey, wallet: string): Promise<Array<{ contract: string; tokenId: string }>> {
-  const url = `https://${CHAIN_RPC[chain]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
-  const mints: Array<{ contract: string; tokenId: string }> = [];
-  const seen = new Set<string>();
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'alchemy_getAssetTransfers',
-        params: [{
-          fromAddress: '0x0000000000000000000000000000000000000000',
-          toAddress: wallet,
-          category: ['erc721', 'erc1155'],
-          order: 'desc',
-          withMetadata: true,
-          maxCount: '0x1F4',
-        }],
-      }),
-    });
-    const data = await res.json();
-    const transfers = data.result?.transfers || [];
-
-    for (const t of transfers) {
-      const contract = (t.rawContract?.address as string)?.toLowerCase();
-      const rawId = t.erc721TokenId || t.tokenId || t.erc1155Metadata?.[0]?.tokenId;
-      if (!contract || !rawId) continue;
-      const decId = BigInt(rawId).toString();
-      const key = `${contract}-${decId}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      mints.push({ contract, tokenId: decId });
-    }
-  } catch { /* transfer fetch failed */ }
-
-  return mints;
-}
-
-export async function fetchMintedNfts(chain: ChainKey, wallet: string, limit: number = 0): Promise<UnifiedToken[]> {
-  const client = getClient(chain);
-  const tokens: UnifiedToken[] = [];
-  const seen = new Set<string>();
-
-  const [sdkResult, transferMints] = await Promise.allSettled([
-    (async () => {
-      const result: UnifiedToken[] = [];
-      let pageKey: string | undefined;
-      do {
-        const response = await client.nft.getMintedNfts(wallet, { pageKey });
-        const metaResults = await Promise.allSettled(
-          response.nfts.map((nft) => nftToToken(nft as unknown as Record<string, unknown>, chain))
-        );
-        for (const r of metaResults) {
-          if (r.status === 'fulfilled') result.push(r.value);
-        }
-        pageKey = response.pageKey;
-        if (limit > 0 && result.length >= limit) break;
-      } while (pageKey);
-      return result;
-    })(),
-    fetchMintsViaTransfers(chain, wallet),
-  ]);
-
-  if (sdkResult.status === 'fulfilled') {
-    for (const t of sdkResult.value) {
-      if (!seen.has(t.id)) {
-        seen.add(t.id);
-        tokens.push({ ...t, createdByWallet: true, creationSource: 'minted' });
-      }
-    }
-  }
-
-  if (transferMints.status === 'fulfilled' && transferMints.value.length > 0) {
-    const missing = transferMints.value.filter((m) => !seen.has(`${chain}-${m.contract}-${m.tokenId}`));
-    if (missing.length > 0) {
-      const metaResults = await Promise.allSettled(
-        missing.map((m) => client.nft.getNftMetadata(m.contract, m.tokenId))
-      );
-      const tokenResults = await Promise.allSettled(
-        metaResults.map((r) => {
-          if (r.status !== 'fulfilled') return Promise.reject();
-          return nftToToken(r.value as unknown as Record<string, unknown>, chain);
-        })
-      );
-      for (const r of tokenResults) {
-        if (r.status === 'fulfilled' && !seen.has(r.value.id)) {
-          seen.add(r.value.id);
-          tokens.push({ ...r.value, createdByWallet: true, creationSource: 'minted' });
-        }
-      }
-    }
-  }
-
-  return limit > 0 ? tokens.slice(0, limit) : tokens;
-}
-
-export async function fetchDeployedContractNfts(chain: ChainKey, wallet: string, limit: number = 0): Promise<UnifiedToken[]> {
-  const client = getClient(chain);
-  const tokens: UnifiedToken[] = [];
-
-  try {
-    let pageKey: string | undefined;
-    const deployedContracts: string[] = [];
-
-    do {
-      const response = await client.nft.getContractsForOwner(wallet, { pageKey });
-      for (const c of response.contracts) {
-        if (c.contractDeployer?.toLowerCase() === wallet.toLowerCase()) {
-          deployedContracts.push(c.address);
-        }
-      }
-      pageKey = response.pageKey;
-    } while (pageKey);
-
-    for (const contractAddr of deployedContracts) {
-      let contractPageKey: string | undefined;
-      do {
-        try {
-          const response = await client.nft.getNftsForContract(contractAddr, { pageKey: contractPageKey });
-          const results = await Promise.allSettled(
-            response.nfts.map((nft) => nftToToken(nft as unknown as Record<string, unknown>, chain))
-          );
-          for (const r of results) {
-            if (r.status === 'fulfilled') {
-              tokens.push({ ...r.value, createdByWallet: true, creationSource: 'contract_deployer' });
-            }
-          }
-          if (limit > 0 && tokens.length >= limit) return tokens.slice(0, limit);
-          contractPageKey = response.pageKey;
-        } catch {
-          break;
-        }
-      } while (contractPageKey);
-    }
-  } catch { /* contract fetch failed */ }
-
-  return limit > 0 ? tokens.slice(0, limit) : tokens;
-}
-
 export async function fetchCreatedNfts(wallet?: string, chainFilter?: ChainKey, limit: number = 0): Promise<UnifiedToken[]> {
   const addr = wallet || DEFAULT_WALLET;
-  const chains = chainFilter ? [chainFilter] : CHAIN_KEYS;
-  const seen = new Set<string>();
+  const discovered = await discoverCreatedTokens(addr, chainFilter);
+
+  const byChain = new Map<ChainKey, typeof discovered>();
+  for (const d of discovered) {
+    const list = byChain.get(d.chain) || [];
+    list.push(d);
+    byChain.set(d.chain, list);
+  }
+
   const allTokens: UnifiedToken[] = [];
 
-  const results = await Promise.allSettled(
-    chains.flatMap((c) => [
-      fetchMintedNfts(c, addr, limit),
-      fetchDeployedContractNfts(c, addr, limit),
-    ])
-  );
+  const chainResults = await Promise.allSettled(
+    Array.from(byChain.entries()).map(async ([chain, items]) => {
+      const client = getClient(chain);
+      const metaResults = await Promise.allSettled(
+        items.map((d) => client.nft.getNftMetadata(d.contract, d.tokenId))
+      );
 
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      for (const token of result.value) {
-        if (!seen.has(token.id)) {
-          seen.add(token.id);
-          allTokens.push(token);
+      const tokens: UnifiedToken[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const d = items[i];
+        const meta = metaResults[i];
+
+        if (meta.status === 'fulfilled') {
+          const token = await nftToToken(meta.value as unknown as Record<string, unknown>, chain);
+          tokens.push({ ...token, createdByWallet: true, creationSource: 'minted' });
+        } else {
+          tokens.push({
+            id: `${chain}-${d.contract}-${d.tokenId}`,
+            chain,
+            contractAddress: d.contract,
+            tokenId: d.tokenId,
+            standard: 'ERC1155',
+            name: d.name || d.symbol || `Token ${d.tokenId}`,
+            description: d.symbol ? `${d.symbol} coin` : undefined,
+            media: { mediaType: 'unknown' },
+            createdByWallet: true,
+            creationSource: 'minted',
+          });
         }
       }
+      return tokens;
+    })
+  );
+
+  for (const result of chainResults) {
+    if (result.status === 'fulfilled') {
+      allTokens.push(...result.value);
     }
   }
 
