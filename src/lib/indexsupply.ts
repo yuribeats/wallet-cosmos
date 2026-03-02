@@ -46,7 +46,8 @@ async function queryIndexSupply(
     if (!Array.isArray(data) || data.length === 0) return [];
 
     const block = data[0];
-    const columns: string[] = block.columns || [];
+    const rawColumns: Array<string | { name: string }> = block.columns || [];
+    const columns: string[] = rawColumns.map((c) => typeof c === 'string' ? c : c.name);
     const rows: Array<Array<string | number>> = block.rows || [];
 
     return rows.map((row) => {
@@ -68,12 +69,13 @@ export async function discoverCreatedTokens(
   const chains = chainFilter ? [chainFilter] : (['ethereum', 'base', 'optimism', 'zora'] as ChainKey[]);
   const chainIds = chains.map((c) => CHAIN_IDS[c]);
   const addr = wallet.toLowerCase();
+  const chainList = chainIds.join(', ');
 
   const setupSig = 'SetupNewToken(uint256 indexed tokenId, address indexed sender, string newURI, uint256 maxSupply)';
-  const setupSql = `select chain_id, address, tokenid, sender, block_num from setupnewtoken where sender = ${addr} limit 200`;
+  const setupSql = `select chain, address, tokenid, sender, block_num from setupnewtoken where sender = ${addr} and chain in (${chainList}) limit 200`;
 
   const coinSig = 'CoinCreated(address indexed caller, address indexed payoutRecipient, address indexed platformReferrer, address currency, string uri, string name, string symbol, address coin, address pool, string version)';
-  const coinSql = `select chain_id, caller, coin, name, symbol, uri, block_num from coincreated where caller = ${addr} limit 200`;
+  const coinSql = `select chain, caller, coin, name, symbol, uri, block_num from coincreated where caller = ${addr} and chain in (${chainList}) limit 200`;
 
   const [setupResult, coinResult] = await Promise.allSettled([
     queryIndexSupply(setupSql, setupSig, chainIds),
@@ -85,7 +87,7 @@ export async function discoverCreatedTokens(
 
   if (setupResult.status === 'fulfilled') {
     for (const row of setupResult.value) {
-      const chainId = Number(row.chain_id);
+      const chainId = Number(row.chain);
       const chain = ID_TO_CHAIN[chainId];
       if (!chain) continue;
       const contract = String(row.address).toLowerCase();
@@ -99,7 +101,7 @@ export async function discoverCreatedTokens(
 
   if (coinResult.status === 'fulfilled') {
     for (const row of coinResult.value) {
-      const chainId = Number(row.chain_id);
+      const chainId = Number(row.chain);
       const chain = ID_TO_CHAIN[chainId];
       if (!chain) continue;
       const contract = String(row.coin).toLowerCase();
