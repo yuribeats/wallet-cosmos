@@ -28,11 +28,10 @@ export default function WalletInput() {
         const parsed = JSON.parse(saved) as string[];
         if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isEvmAddress)) {
           setWallets(parsed);
-          loadWallets(parsed);
         }
       }
     } catch {}
-  }, [loadWallets]);
+  }, []);
 
   async function handleAdd() {
     const input = value.trim();
