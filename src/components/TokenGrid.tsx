@@ -137,21 +137,27 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
     [storeTokens, filters, getFilteredTokens]
   );
 
-  const isMosaic = !!(mosaicOrder && mosaicCols);
+  const isMosaic = !!(mosaicOrder && mosaicOrder.length > 0 && mosaicCols);
 
   const mosaicTokens = useMemo(() => {
-    if (!mosaicOrder) return [];
+    if (!mosaicOrder || mosaicOrder.length === 0) return [];
     const tokenMap = new Map(storeTokens.map((t) => [t.id, t]));
-    return mosaicOrder.map((id) => tokenMap.get(id)).filter(Boolean) as UnifiedToken[];
+    const result = mosaicOrder.map((id) => tokenMap.get(id)).filter(Boolean) as UnifiedToken[];
+    if (result.length === 0) {
+      console.warn('[MOSAIC] No tokens matched. Order IDs sample:', mosaicOrder.slice(0, 3), 'Store IDs sample:', storeTokens.slice(0, 3).map(t => t.id));
+    } else {
+      console.log('[MOSAIC] Rendering', result.length, 'cells from', new Set(mosaicOrder).size, 'unique tokens');
+    }
+    return result;
   }, [mosaicOrder, storeTokens]);
 
-  const displayTokens = isMosaic
+  const displayTokens = isMosaic && mosaicTokens.length > 0
     ? mosaicTokens
     : tokens.length > 0
       ? tokens
       : filteredTokens;
 
-  const gridColumns = isMosaic
+  const gridColumns = isMosaic && mosaicTokens.length > 0
     ? `repeat(${mosaicCols}, 1fr)`
     : isMobile
       ? 'repeat(5, 1fr)'

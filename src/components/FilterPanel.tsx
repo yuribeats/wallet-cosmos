@@ -142,7 +142,9 @@ export default function FilterPanel() {
       );
 
       setMosaicProgress('MATCHING...');
+      console.log('[MOSAIC] Token colors extracted:', tokenColors.size, '/', tokenInputs.length);
       const order = assignTokensToGrid(cellColors, tokenColors);
+      console.log('[MOSAIC] Grid:', cols, 'x', rows, '=', cellColors.length, 'cells. Order length:', order.length);
       setMosaicOrder(order, cols);
       setFilter('layout', 'grid');
     } catch {
