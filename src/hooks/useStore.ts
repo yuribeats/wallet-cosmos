@@ -22,6 +22,9 @@ interface WalletStore {
   playlistTokens: UnifiedToken[];
   playlistIndex: number;
 
+  mosaicOrder: string[] | null;
+  mosaicCols: number | null;
+
   setTokens: (tokens: UnifiedToken[]) => void;
   appendTokens: (tokens: UnifiedToken[]) => void;
   setConnections: (connections: WalletConnection[]) => void;
@@ -37,6 +40,7 @@ interface WalletStore {
   setActiveChains: (chains: ChainKey[]) => void;
   toggleChain: (chain: ChainKey) => void;
   getFilteredTokens: () => UnifiedToken[];
+  setMosaicOrder: (order: string[] | null, cols?: number | null) => void;
   openPlaylist: () => void;
   closePlaylist: () => void;
   nextTrack: () => void;
@@ -75,6 +79,9 @@ export const useStore = create<WalletStore>((set, get) => ({
   playlistOpen: false,
   playlistTokens: [],
   playlistIndex: 0,
+
+  mosaicOrder: null,
+  mosaicCols: null,
 
   setTokens: (tokens) => set({ tokens }),
   appendTokens: (tokens) => set((s) => ({ tokens: [...s.tokens, ...tokens] })),
@@ -141,6 +148,8 @@ export const useStore = create<WalletStore>((set, get) => ({
   prevTrack: () => set((s) => ({ playlistIndex: (s.playlistIndex - 1 + s.playlistTokens.length) % s.playlistTokens.length })),
   setPlaylistIndex: (index) => set({ playlistIndex: index }),
 
+  setMosaicOrder: (order, cols) => set({ mosaicOrder: order, mosaicCols: cols ?? null }),
+
   getFilteredTokens: () => {
     const { tokens, filters } = get();
     let filtered = tokens;
@@ -192,6 +201,17 @@ export const useStore = create<WalletStore>((set, get) => ({
       seen.add(key);
       return true;
     });
+
+    const { mosaicOrder } = get();
+    if (mosaicOrder) {
+      const tokenMap = new Map(filtered.map((t) => [t.id, t]));
+      const ordered: UnifiedToken[] = [];
+      for (const id of mosaicOrder) {
+        const t = tokenMap.get(id);
+        if (t) ordered.push(t);
+      }
+      return ordered;
+    }
 
     return filtered;
   },

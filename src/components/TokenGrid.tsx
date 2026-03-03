@@ -126,14 +126,22 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
   const filters = useStore((s) => s.filters);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
   const storeTokens = useStore((s) => s.tokens);
+  const mosaicOrder = useStore((s) => s.mosaicOrder);
+  const mosaicCols = useStore((s) => s.mosaicCols);
   const isMobile = useIsMobile();
 
   const filteredTokens = useMemo(
     () => getFilteredTokens(),
-    [storeTokens, filters, getFilteredTokens]
+    [storeTokens, filters, mosaicOrder, getFilteredTokens]
   );
 
   const displayTokens = tokens.length > 0 ? tokens : filteredTokens;
+
+  const gridColumns = mosaicOrder && mosaicCols
+    ? `repeat(${mosaicCols}, 1fr)`
+    : isMobile
+      ? 'repeat(5, 1fr)'
+      : 'repeat(auto-fill, minmax(200px, 1fr))';
 
   return (
     <div style={{
@@ -146,8 +154,8 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
     }}>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(5, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
-        gap: '2px',
+        gridTemplateColumns: gridColumns,
+        gap: mosaicOrder ? '0px' : '2px',
       }}>
         {displayTokens.map((token) => (
           <TokenCard key={token.id} token={token} onSelect={onSelect} />

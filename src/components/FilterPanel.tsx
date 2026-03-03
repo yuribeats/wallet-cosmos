@@ -1,11 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { CHAINS, CHAIN_KEYS } from '@/lib/constants';
 import type { ChainKey } from '@/lib/constants';
 import { filtersToParams } from '@/lib/urlFilters';
 import type { UnifiedToken } from '@/lib/types';
+import {
+  analyzeImage,
+  extractTokenColor,
+  assignTokensToGrid,
+  computeGridDimensions,
+} from '@/lib/mosaic';
 
 const STANDARDS = ['ERC721', 'ERC1155'];
 const MEDIA_TYPES = ['image', 'video', 'audio'];
@@ -75,9 +81,13 @@ export default function FilterPanel() {
   const toggleChain = useStore((s) => s.toggleChain);
   const evmAddresses = useStore((s) => s.evmAddresses);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
+  const mosaicOrder = useStore((s) => s.mosaicOrder);
+  const setMosaicOrder = useStore((s) => s.setMosaicOrder);
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [mosaicLoading, setMosaicLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   function toggleArrayFilter(key: 'standards' | 'mediaTypes', value: string) {
@@ -94,6 +104,50 @@ export default function FilterPanel() {
     } else {
       document.documentElement.requestFullscreen();
     }
+  }
+
+  async function handleMosaicFile(file: File) {
+    setMosaicLoading(true);
+    try {
+      const tokens = getFilteredTokens();
+      if (tokens.length === 0) {
+        setMosaicLoading(false);
+        return;
+      }
+
+      const bitmap = await createImageBitmap(file);
+      const { cols, rows } = computeGridDimensions(
+        tokens.length,
+        bitmap.width,
+        bitmap.height
+      );
+      bitmap.close();
+
+      const cellColors = await analyzeImage(file, cols, rows);
+
+      const colorResults = await Promise.allSettled(
+        tokens.map(async (t) => {
+          const url = t.media.thumbnail || t.media.image;
+          if (!url) throw new Error('no image');
+          const color = await extractTokenColor(url);
+          return { id: t.id, color } as const;
+        })
+      );
+
+      const tokenColors = new Map<string, [number, number, number]>();
+      for (const r of colorResults) {
+        if (r.status === 'fulfilled') {
+          tokenColors.set(r.value.id, r.value.color);
+        }
+      }
+
+      const order = assignTokensToGrid(cellColors, tokenColors);
+      setMosaicOrder(order, cols);
+      setFilter('layout', 'grid');
+    } catch {
+      // silently fail
+    }
+    setMosaicLoading(false);
   }
 
   if (collapsed) {
@@ -345,6 +399,65 @@ export default function FilterPanel() {
               onClick={() => setFilter('layout', opt.value as typeof filters.layout)}
             />
           ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '12px' }}>
+        <span style={labelStyle}>MOSAIC</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleMosaicFile(file);
+              e.target.value = '';
+            }}
+          />
+          {mosaicOrder ? (
+            <button
+              onClick={() => setMosaicOrder(null)}
+              style={{
+                background: 'rgba(34, 139, 34, 0.25)',
+                border: '1px solid #228B22',
+                color: '#228B22',
+                padding: '6px 10px',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                fontFamily: 'inherit',
+                textTransform: 'uppercase',
+                cursor: 'crosshair',
+                letterSpacing: '0.05em',
+                marginRight: '4px',
+                marginBottom: '4px',
+              }}
+            >
+              CLEAR MOSAIC
+            </button>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={mosaicLoading}
+              style={{
+                background: mosaicLoading ? 'rgba(255,255,255,0.1)' : 'transparent',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: mosaicLoading ? '#555' : '#fff',
+                padding: '6px 10px',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                fontFamily: 'inherit',
+                textTransform: 'uppercase',
+                cursor: 'crosshair',
+                letterSpacing: '0.05em',
+                marginRight: '4px',
+                marginBottom: '4px',
+              }}
+            >
+              {mosaicLoading ? 'PROCESSING...' : 'UPLOAD IMAGE'}
+            </button>
+          )}
         </div>
       </div>
 
