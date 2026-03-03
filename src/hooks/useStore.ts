@@ -202,17 +202,6 @@ export const useStore = create<WalletStore>((set, get) => ({
       return true;
     });
 
-    const { mosaicOrder } = get();
-    if (mosaicOrder) {
-      const tokenMap = new Map(filtered.map((t) => [t.id, t]));
-      const ordered: UnifiedToken[] = [];
-      for (const id of mosaicOrder) {
-        const t = tokenMap.get(id);
-        if (t) ordered.push(t);
-      }
-      return ordered;
-    }
-
     return filtered;
   },
 }));

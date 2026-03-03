@@ -10,7 +10,7 @@ interface TokenGridProps {
   onSelect: (token: UnifiedToken) => void;
 }
 
-function TokenCard({ token, onSelect }: { token: UnifiedToken; onSelect: (t: UnifiedToken) => void }) {
+function TokenCard({ token, onSelect, compact }: { token: UnifiedToken; onSelect: (t: UnifiedToken) => void; compact?: boolean }) {
   const chain = CHAINS[token.chain as ChainKey];
   const imageUrl = token.media.thumbnail || token.media.image;
   const videoUrl = token.media.video;
@@ -25,7 +25,7 @@ function TokenCard({ token, onSelect }: { token: UnifiedToken; onSelect: (t: Uni
         position: 'relative',
         aspectRatio: '1',
         background: '#111',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: compact ? 'none' : '1px solid rgba(255,255,255,0.06)',
         overflow: 'hidden',
         cursor: 'crosshair',
       }}
@@ -72,41 +72,43 @@ function TokenCard({ token, onSelect }: { token: UnifiedToken; onSelect: (t: Uni
           textAlign: 'center',
           wordBreak: 'break-all',
         }}>
-          {token.name}
+          {compact ? '' : token.name}
         </div>
       )}
-      <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
-        padding: '16px 6px 4px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-      }}>
+      {!compact && (
         <div style={{
-          fontSize: '8px',
-          fontWeight: 'bold',
-          color: '#aaa',
-          textTransform: 'uppercase',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          maxWidth: '70%',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
+          padding: '16px 6px 4px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
         }}>
-          {token.name}
+          <div style={{
+            fontSize: '8px',
+            fontWeight: 'bold',
+            color: '#aaa',
+            textTransform: 'uppercase',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '70%',
+          }}>
+            {token.name}
+          </div>
+          <div style={{
+            fontSize: '7px',
+            fontWeight: 'bold',
+            color: chain.color,
+            textTransform: 'uppercase',
+          }}>
+            {chain.name}
+          </div>
         </div>
-        <div style={{
-          fontSize: '7px',
-          fontWeight: 'bold',
-          color: chain.color,
-          textTransform: 'uppercase',
-        }}>
-          {chain.name}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -132,12 +134,24 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
 
   const filteredTokens = useMemo(
     () => getFilteredTokens(),
-    [storeTokens, filters, mosaicOrder, getFilteredTokens]
+    [storeTokens, filters, getFilteredTokens]
   );
 
-  const displayTokens = tokens.length > 0 ? tokens : filteredTokens;
+  const isMosaic = !!(mosaicOrder && mosaicCols);
 
-  const gridColumns = mosaicOrder && mosaicCols
+  const mosaicTokens = useMemo(() => {
+    if (!mosaicOrder) return [];
+    const tokenMap = new Map(storeTokens.map((t) => [t.id, t]));
+    return mosaicOrder.map((id) => tokenMap.get(id)).filter(Boolean) as UnifiedToken[];
+  }, [mosaicOrder, storeTokens]);
+
+  const displayTokens = isMosaic
+    ? mosaicTokens
+    : tokens.length > 0
+      ? tokens
+      : filteredTokens;
+
+  const gridColumns = isMosaic
     ? `repeat(${mosaicCols}, 1fr)`
     : isMobile
       ? 'repeat(5, 1fr)'
@@ -155,10 +169,15 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
       <div style={{
         display: 'grid',
         gridTemplateColumns: gridColumns,
-        gap: mosaicOrder ? '0px' : '2px',
+        gap: isMosaic ? '0px' : '2px',
       }}>
-        {displayTokens.map((token) => (
-          <TokenCard key={token.id} token={token} onSelect={onSelect} />
+        {displayTokens.map((token, i) => (
+          <TokenCard
+            key={isMosaic ? i : token.id}
+            token={token}
+            onSelect={onSelect}
+            compact={isMosaic}
+          />
         ))}
       </div>
     </div>

@@ -8,7 +8,7 @@ import { filtersToParams } from '@/lib/urlFilters';
 import type { UnifiedToken } from '@/lib/types';
 import {
   analyzeImage,
-  extractTokenColor,
+  extractTokenColorsBatched,
   assignTokensToGrid,
   computeGridDimensions,
 } from '@/lib/mosaic';
@@ -87,6 +87,7 @@ export default function FilterPanel() {
   const [collapsed, setCollapsed] = useState(true);
   const [copied, setCopied] = useState(false);
   const [mosaicLoading, setMosaicLoading] = useState(false);
+  const [mosaicProgress, setMosaicProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -108,39 +109,39 @@ export default function FilterPanel() {
 
   async function handleMosaicFile(file: File) {
     setMosaicLoading(true);
+    setMosaicProgress('ANALYZING IMAGE...');
     try {
       const tokens = getFilteredTokens();
       if (tokens.length === 0) {
         setMosaicLoading(false);
+        setMosaicProgress('');
         return;
       }
 
       const bitmap = await createImageBitmap(file);
+      const targetCols = isMobile ? 30 : 50;
       const { cols, rows } = computeGridDimensions(
-        tokens.length,
         bitmap.width,
-        bitmap.height
+        bitmap.height,
+        targetCols
       );
       bitmap.close();
 
       const cellColors = await analyzeImage(file, cols, rows);
 
-      const colorResults = await Promise.allSettled(
-        tokens.map(async (t) => {
-          const url = t.media.thumbnail || t.media.image;
-          if (!url) throw new Error('no image');
-          const color = await extractTokenColor(url);
-          return { id: t.id, color } as const;
-        })
+      const tokenInputs = tokens
+        .map((t) => ({ id: t.id, url: t.media.thumbnail || t.media.image || '' }))
+        .filter((t) => t.url);
+
+      setMosaicProgress(`EXTRACTING COLORS 0/${tokenInputs.length}`);
+
+      const tokenColors = await extractTokenColorsBatched(
+        tokenInputs,
+        6,
+        (done, total) => setMosaicProgress(`EXTRACTING COLORS ${done}/${total}`)
       );
 
-      const tokenColors = new Map<string, [number, number, number]>();
-      for (const r of colorResults) {
-        if (r.status === 'fulfilled') {
-          tokenColors.set(r.value.id, r.value.color);
-        }
-      }
-
+      setMosaicProgress('MATCHING...');
       const order = assignTokensToGrid(cellColors, tokenColors);
       setMosaicOrder(order, cols);
       setFilter('layout', 'grid');
@@ -148,6 +149,7 @@ export default function FilterPanel() {
       // silently fail
     }
     setMosaicLoading(false);
+    setMosaicProgress('');
   }
 
   if (collapsed) {
@@ -455,7 +457,7 @@ export default function FilterPanel() {
                 marginBottom: '4px',
               }}
             >
-              {mosaicLoading ? 'PROCESSING...' : 'UPLOAD IMAGE'}
+              {mosaicLoading ? (mosaicProgress || 'PROCESSING...') : 'UPLOAD IMAGE'}
             </button>
           )}
         </div>
