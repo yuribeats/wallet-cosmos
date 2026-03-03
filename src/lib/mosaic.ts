@@ -176,14 +176,19 @@ export function assignTokensToGrid(
   const entries = Array.from(tokenColors.entries());
   if (entries.length === 0) return [];
   const tokenLabs = entries.map(([id, rgb]) => [id, rgbToLab(rgb)] as const);
+
+  const maxRepeats = Math.max(1, Math.ceil(cellColors.length / entries.length));
+  const usageCount = new Map<string, number>();
+
   const result: string[] = [];
 
   for (const cellColor of cellColors) {
     const cellLab = rgbToLab(cellColor);
-    let bestId = tokenLabs[0][0];
+    let bestId = '';
     let bestDist = Infinity;
 
     for (const [id, lab] of tokenLabs) {
+      if ((usageCount.get(id) || 0) >= maxRepeats) continue;
       const d = labDistance(cellLab, lab);
       if (d < bestDist) {
         bestDist = d;
@@ -191,7 +196,19 @@ export function assignTokensToGrid(
       }
     }
 
+    // All tokens at cap — allow overflow on best match
+    if (!bestId) {
+      for (const [id, lab] of tokenLabs) {
+        const d = labDistance(cellLab, lab);
+        if (d < bestDist) {
+          bestDist = d;
+          bestId = id;
+        }
+      }
+    }
+
     result.push(bestId);
+    usageCount.set(bestId, (usageCount.get(bestId) || 0) + 1);
   }
 
   return result;
