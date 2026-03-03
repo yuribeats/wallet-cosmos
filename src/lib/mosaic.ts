@@ -72,78 +72,23 @@ export async function analyzeImage(
   return colors;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
-  ]);
-}
-
-async function loadImageToCanvas(url: string): Promise<RGB> {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-
-  const loaded = await withTimeout(new Promise<HTMLImageElement>((resolve, reject) => {
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('img load failed'));
-    img.src = url;
-  }), 5000);
-
-  const canvas = document.createElement('canvas');
-  canvas.width = 10;
-  canvas.height = 10;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(loaded, 0, 0, 10, 10);
-  const data = ctx.getImageData(0, 0, 10, 10).data;
-
-  let r = 0, g = 0, b = 0, count = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    r += data[i];
-    g += data[i + 1];
-    b += data[i + 2];
-    count++;
-  }
-  return [Math.round(r / count), Math.round(g / count), Math.round(b / count)];
-}
-
 export async function extractTokenColor(imageUrl: string): Promise<RGB> {
-  // Try direct load first (works for same-origin and CORS-enabled CDNs)
-  try {
-    return await loadImageToCanvas(imageUrl);
-  } catch {
-    // Fall back to proxy
-  }
-
   const proxied = `/api/image?url=${encodeURIComponent(imageUrl)}`;
-  try {
-    return await loadImageToCanvas(proxied);
-  } catch {
-    // Fall back to fetch + blob
-  }
-
-  const res = await fetch(proxied, { signal: AbortSignal.timeout(5000) });
-  if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+  const res = await fetch(proxied, { signal: AbortSignal.timeout(3000) });
+  if (!res.ok) throw new Error(`${res.status}`);
   const blob = await res.blob();
   const bitmap = await createImageBitmap(blob);
-  const canvas = new OffscreenCanvas(10, 10);
+  const canvas = new OffscreenCanvas(1, 1);
   const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0, 10, 10);
-  const data = ctx.getImageData(0, 0, 10, 10).data;
+  ctx.drawImage(bitmap, 0, 0, 1, 1);
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
   bitmap.close();
-
-  let r = 0, g = 0, b = 0, count = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    r += data[i];
-    g += data[i + 1];
-    b += data[i + 2];
-    count++;
-  }
-  return [Math.round(r / count), Math.round(g / count), Math.round(b / count)];
+  return [r, g, b];
 }
 
 export async function extractTokenColorsBatched(
   tokens: Array<{ id: string; url: string }>,
-  concurrency: number = 30,
+  concurrency: number = 50,
   onProgress?: (done: number, succeeded: number, total: number) => void
 ): Promise<Map<string, RGB>> {
   const result = new Map<string, RGB>();
