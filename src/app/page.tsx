@@ -35,6 +35,7 @@ export default function Home() {
   const tokens = useStore((s) => s.tokens);
   const filters = useStore((s) => s.filters);
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
+  const mosaicOrder = useStore((s) => s.mosaicOrder);
 
   const filteredTokens = useMemo(() => getFilteredTokens(), [tokens, filters, getFilteredTokens]);
 
@@ -78,7 +79,9 @@ export default function Home() {
 
   return (
     <main style={{ width: '100vw', height: '100vh', position: 'relative', cursor: 'crosshair' }}>
-      {webgl && SceneComponent ? (
+      {mosaicOrder ? (
+        <TokenGrid tokens={[]} onSelect={setSelectedToken} />
+      ) : webgl && SceneComponent ? (
         <SceneComponent />
       ) : (
         <TokenGrid tokens={filteredTokens} onSelect={setSelectedToken} />
