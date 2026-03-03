@@ -72,15 +72,22 @@ export async function analyzeImage(
   return colors;
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
+}
+
 async function loadImageToCanvas(url: string): Promise<RGB> {
   const img = new Image();
   img.crossOrigin = 'anonymous';
 
-  const loaded = await new Promise<HTMLImageElement>((resolve, reject) => {
+  const loaded = await withTimeout(new Promise<HTMLImageElement>((resolve, reject) => {
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error('img load failed'));
     img.src = url;
-  });
+  }), 5000);
 
   const canvas = document.createElement('canvas');
   canvas.width = 10;
@@ -114,7 +121,7 @@ export async function extractTokenColor(imageUrl: string): Promise<RGB> {
     // Fall back to fetch + blob
   }
 
-  const res = await fetch(proxied);
+  const res = await fetch(proxied, { signal: AbortSignal.timeout(5000) });
   if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
   const blob = await res.blob();
   const bitmap = await createImageBitmap(blob);
@@ -136,7 +143,7 @@ export async function extractTokenColor(imageUrl: string): Promise<RGB> {
 
 export async function extractTokenColorsBatched(
   tokens: Array<{ id: string; url: string }>,
-  concurrency: number = 15,
+  concurrency: number = 30,
   onProgress?: (done: number, succeeded: number, total: number) => void
 ): Promise<Map<string, RGB>> {
   const result = new Map<string, RGB>();
