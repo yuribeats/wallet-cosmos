@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { CHAINS, type ChainKey } from '@/lib/constants';
 import type { UnifiedToken } from '@/lib/types';
@@ -139,23 +139,10 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
 
   const isMosaic = !!(mosaicOrder && mosaicOrder.length > 0 && mosaicCols);
 
-  useEffect(() => {
-    if (mosaicOrder) {
-      console.log('[MOSAIC:GRID] mosaicOrder changed, length:', mosaicOrder.length, 'cols:', mosaicCols);
-    } else {
-      console.log('[MOSAIC:GRID] mosaicOrder cleared');
-    }
-  }, [mosaicOrder, mosaicCols]);
-
   const mosaicTokens = useMemo(() => {
     if (!mosaicOrder || mosaicOrder.length === 0) return [];
     const tokenMap = new Map(storeTokens.map((t) => [t.id, t]));
-    const result = mosaicOrder.map((id) => tokenMap.get(id)).filter(Boolean) as UnifiedToken[];
-    console.log('[MOSAIC:GRID] mosaicTokens computed:', result.length, '/', mosaicOrder.length, 'matched. isMosaic:', !!(mosaicOrder.length > 0 && mosaicCols));
-    if (result.length === 0) {
-      console.warn('[MOSAIC:GRID] IDs sample — order:', mosaicOrder.slice(0, 3), 'store:', storeTokens.slice(0, 3).map(t => t.id));
-    }
-    return result;
+    return mosaicOrder.map((id) => tokenMap.get(id)).filter(Boolean) as UnifiedToken[];
   }, [mosaicOrder, storeTokens]);
 
   const displayTokens = isMosaic && mosaicTokens.length > 0
@@ -170,7 +157,81 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
       ? 'repeat(5, 1fr)'
       : 'repeat(auto-fill, minmax(200px, 1fr))';
 
-  console.log('[MOSAIC:GRID] render — isMosaic:', isMosaic, 'mosaicTokens:', mosaicTokens.length, 'displayTokens:', displayTokens.length, 'gridCols:', gridColumns.slice(0, 30));
+  // Zoom/pan state for mosaic mode
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragging = useRef(false);
+  const lastMouse = useRef({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Reset zoom/pan when mosaic changes
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [isMosaic]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (!isMosaic) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setZoom((z) => Math.max(0.5, Math.min(10, z * delta)));
+  }, [isMosaic]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isMosaic) return;
+    dragging.current = true;
+    lastMouse.current = { x: e.clientX, y: e.clientY };
+  }, [isMosaic]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragging.current) return;
+    const dx = e.clientX - lastMouse.current.x;
+    const dy = e.clientY - lastMouse.current.y;
+    lastMouse.current = { x: e.clientX, y: e.clientY };
+    setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    dragging.current = false;
+  }, []);
+
+  if (isMosaic) {
+    return (
+      <div
+        ref={containerRef}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#0a0a0f',
+          overflow: 'hidden',
+          zIndex: 1,
+          cursor: dragging.current ? 'grabbing' : 'crosshair',
+        }}
+      >
+        <div style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: 'center center',
+          display: 'grid',
+          gridTemplateColumns: gridColumns,
+          gap: '0px',
+        }}>
+          {displayTokens.map((token, i) => (
+            <TokenCard
+              key={i}
+              token={token}
+              onSelect={onSelect}
+              compact
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -184,15 +245,10 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
       <div style={{
         display: 'grid',
         gridTemplateColumns: gridColumns,
-        gap: isMosaic ? '0px' : '2px',
+        gap: '2px',
       }}>
-        {displayTokens.map((token, i) => (
-          <TokenCard
-            key={isMosaic ? i : token.id}
-            token={token}
-            onSelect={onSelect}
-            compact={isMosaic}
-          />
+        {displayTokens.map((token) => (
+          <TokenCard key={token.id} token={token} onSelect={onSelect} />
         ))}
       </div>
     </div>
