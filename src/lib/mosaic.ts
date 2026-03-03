@@ -72,18 +72,56 @@ export async function analyzeImage(
   return colors;
 }
 
+async function loadImageToCanvas(url: string): Promise<RGB> {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+
+  const loaded = await new Promise<HTMLImageElement>((resolve, reject) => {
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('img load failed'));
+    img.src = url;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 10;
+  canvas.height = 10;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(loaded, 0, 0, 10, 10);
+  const data = ctx.getImageData(0, 0, 10, 10).data;
+
+  let r = 0, g = 0, b = 0, count = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    r += data[i];
+    g += data[i + 1];
+    b += data[i + 2];
+    count++;
+  }
+  return [Math.round(r / count), Math.round(g / count), Math.round(b / count)];
+}
+
 export async function extractTokenColor(imageUrl: string): Promise<RGB> {
+  // Try direct load first (works for same-origin and CORS-enabled CDNs)
+  try {
+    return await loadImageToCanvas(imageUrl);
+  } catch {
+    // Fall back to proxy
+  }
+
   const proxied = `/api/image?url=${encodeURIComponent(imageUrl)}`;
+  try {
+    return await loadImageToCanvas(proxied);
+  } catch {
+    // Fall back to fetch + blob
+  }
+
   const res = await fetch(proxied);
   if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
   const blob = await res.blob();
   const bitmap = await createImageBitmap(blob);
-
-  const size = 10;
-  const canvas = new OffscreenCanvas(size, size);
+  const canvas = new OffscreenCanvas(10, 10);
   const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0, size, size);
-  const data = ctx.getImageData(0, 0, size, size).data;
+  ctx.drawImage(bitmap, 0, 0, 10, 10);
+  const data = ctx.getImageData(0, 0, 10, 10).data;
   bitmap.close();
 
   let r = 0, g = 0, b = 0, count = 0;
@@ -98,8 +136,8 @@ export async function extractTokenColor(imageUrl: string): Promise<RGB> {
 
 export async function extractTokenColorsBatched(
   tokens: Array<{ id: string; url: string }>,
-  concurrency: number = 6,
-  onProgress?: (done: number, total: number) => void
+  concurrency: number = 15,
+  onProgress?: (done: number, succeeded: number, total: number) => void
 ): Promise<Map<string, RGB>> {
   const result = new Map<string, RGB>();
   let done = 0;
@@ -118,7 +156,7 @@ export async function extractTokenColorsBatched(
       }
     }
     done += batch.length;
-    onProgress?.(done, tokens.length);
+    onProgress?.(done, result.size, tokens.length);
   }
 
   return result;
@@ -129,12 +167,13 @@ export function assignTokensToGrid(
   tokenColors: Map<string, RGB>
 ): string[] {
   const entries = Array.from(tokenColors.entries());
+  if (entries.length === 0) return [];
   const tokenLabs = entries.map(([id, rgb]) => [id, rgbToLab(rgb)] as const);
   const result: string[] = [];
 
   for (const cellColor of cellColors) {
     const cellLab = rgbToLab(cellColor);
-    let bestId = tokenLabs[0]?.[0] ?? '';
+    let bestId = tokenLabs[0][0];
     let bestDist = Infinity;
 
     for (const [id, lab] of tokenLabs) {

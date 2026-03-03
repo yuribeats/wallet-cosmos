@@ -113,8 +113,8 @@ export default function FilterPanel() {
     try {
       const tokens = getFilteredTokens();
       if (tokens.length === 0) {
-        setMosaicLoading(false);
-        setMosaicProgress('');
+        setMosaicProgress('NO TOKENS');
+        setTimeout(() => { setMosaicLoading(false); setMosaicProgress(''); }, 2000);
         return;
       }
 
@@ -133,25 +133,43 @@ export default function FilterPanel() {
         .map((t) => ({ id: t.id, url: t.media.thumbnail || t.media.image || '' }))
         .filter((t) => t.url);
 
-      setMosaicProgress(`EXTRACTING COLORS 0/${tokenInputs.length}`);
+      setMosaicProgress(`0 OK / 0 OF ${tokenInputs.length}`);
 
       const tokenColors = await extractTokenColorsBatched(
         tokenInputs,
-        6,
-        (done, total) => setMosaicProgress(`EXTRACTING COLORS ${done}/${total}`)
+        15,
+        (done, succeeded, total) => setMosaicProgress(`${succeeded} OK / ${done} OF ${total}`)
       );
 
-      setMosaicProgress('MATCHING...');
       console.log('[MOSAIC] Token colors extracted:', tokenColors.size, '/', tokenInputs.length);
+
+      if (tokenColors.size === 0) {
+        setMosaicProgress('0 COLORS EXTRACTED — FAILED');
+        setTimeout(() => { setMosaicLoading(false); setMosaicProgress(''); }, 3000);
+        return;
+      }
+
+      setMosaicProgress(`MATCHING ${tokenColors.size} COLORS TO ${cellColors.length} CELLS...`);
+
+      await new Promise((r) => setTimeout(r, 0));
+
       const order = assignTokensToGrid(cellColors, tokenColors);
-      console.log('[MOSAIC] Grid:', cols, 'x', rows, '=', cellColors.length, 'cells. Order length:', order.length);
+      console.log('[MOSAIC] Grid:', cols, 'x', rows, '| Cells:', order.length, '| Unique tokens:', new Set(order).size);
+
+      if (order.length === 0) {
+        setMosaicProgress('MATCHING FAILED');
+        setTimeout(() => { setMosaicLoading(false); setMosaicProgress(''); }, 2000);
+        return;
+      }
+
       setMosaicOrder(order, cols);
       setFilter('layout', 'grid');
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error('[MOSAIC] Error:', err);
+      setMosaicProgress('ERROR — CHECK CONSOLE');
+      setTimeout(() => { setMosaicProgress(''); }, 3000);
     }
     setMosaicLoading(false);
-    setMosaicProgress('');
   }
 
   if (collapsed) {
