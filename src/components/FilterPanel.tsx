@@ -83,6 +83,8 @@ export default function FilterPanel() {
   const getFilteredTokens = useStore((s) => s.getFilteredTokens);
   const mosaicOrder = useStore((s) => s.mosaicOrder);
   const setMosaicOrder = useStore((s) => s.setMosaicOrder);
+  const tokenColorCache = useStore((s) => s.tokenColorCache);
+  const setTokenColorCache = useStore((s) => s.setTokenColorCache);
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -133,15 +135,34 @@ export default function FilterPanel() {
         .map((t) => ({ id: t.id, url: t.media.thumbnail || t.media.image || '' }))
         .filter((t) => t.url);
 
-      setMosaicProgress(`0 OK / 0 OF ${tokenInputs.length}`);
+      const cached = tokenColorCache;
+      const uncached = tokenInputs.filter((t) => !cached[t.id]);
+      const tokenColors = new Map<string, [number, number, number]>();
 
-      const tokenColors = await extractTokenColorsBatched(
-        tokenInputs,
-        15,
-        (done, succeeded, total) => setMosaicProgress(`${succeeded} OK / ${done} OF ${total}`)
-      );
+      for (const t of tokenInputs) {
+        if (cached[t.id]) tokenColors.set(t.id, cached[t.id]);
+      }
 
-      console.log('[MOSAIC] Token colors extracted:', tokenColors.size, '/', tokenInputs.length);
+      if (uncached.length > 0) {
+        setMosaicProgress(`${tokenColors.size} CACHED / ${uncached.length} TO SCAN`);
+
+        const freshColors = await extractTokenColorsBatched(
+          uncached,
+          15,
+          (done, succeeded, total) => setMosaicProgress(`${tokenColors.size + succeeded} OK / ${tokenColors.size + done} OF ${tokenInputs.length}`)
+        );
+
+        const newCache = { ...cached };
+        for (const [id, color] of freshColors) {
+          tokenColors.set(id, color);
+          newCache[id] = color;
+        }
+        setTokenColorCache(newCache);
+      } else {
+        setMosaicProgress(`${tokenColors.size} CACHED — MATCHING...`);
+      }
+
+      console.log('[MOSAIC] Token colors:', tokenColors.size, '/', tokenInputs.length, '(', uncached.length, 'freshly scanned)');
 
       if (tokenColors.size === 0) {
         setMosaicProgress('0 COLORS EXTRACTED — FAILED');

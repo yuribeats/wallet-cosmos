@@ -24,6 +24,7 @@ interface WalletStore {
 
   mosaicOrder: string[] | null;
   mosaicCols: number | null;
+  tokenColorCache: Record<string, [number, number, number]>;
 
   setTokens: (tokens: UnifiedToken[]) => void;
   appendTokens: (tokens: UnifiedToken[]) => void;
@@ -41,6 +42,7 @@ interface WalletStore {
   toggleChain: (chain: ChainKey) => void;
   getFilteredTokens: () => UnifiedToken[];
   setMosaicOrder: (order: string[] | null, cols?: number | null) => void;
+  setTokenColorCache: (cache: Record<string, [number, number, number]>) => void;
   openPlaylist: () => void;
   closePlaylist: () => void;
   nextTrack: () => void;
@@ -82,6 +84,7 @@ export const useStore = create<WalletStore>((set, get) => ({
 
   mosaicOrder: null,
   mosaicCols: null,
+  tokenColorCache: {},
 
   setTokens: (tokens) => set({ tokens }),
   appendTokens: (tokens) => set((s) => ({ tokens: [...s.tokens, ...tokens] })),
@@ -149,6 +152,7 @@ export const useStore = create<WalletStore>((set, get) => ({
   setPlaylistIndex: (index) => set({ playlistIndex: index }),
 
   setMosaicOrder: (order, cols) => set({ mosaicOrder: order, mosaicCols: cols ?? null }),
+  setTokenColorCache: (cache) => set({ tokenColorCache: cache }),
 
   getFilteredTokens: () => {
     const { tokens, filters } = get();
