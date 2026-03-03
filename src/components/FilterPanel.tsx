@@ -163,7 +163,12 @@ export default function FilterPanel() {
       }
 
       setMosaicOrder(order, cols);
-      setFilter('layout', 'grid');
+
+      // Verify it stuck
+      const stored = useStore.getState();
+      console.log('[MOSAIC] Store after set — mosaicOrder:', stored.mosaicOrder?.length, 'mosaicCols:', stored.mosaicCols);
+      console.log('[MOSAIC] Sample IDs:', order.slice(0, 3));
+      console.log('[MOSAIC] Store token IDs sample:', stored.tokens.slice(0, 3).map(t => t.id));
     } catch (err) {
       console.error('[MOSAIC] Error:', err);
       setMosaicProgress('ERROR — CHECK CONSOLE');

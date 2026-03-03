@@ -139,14 +139,21 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
 
   const isMosaic = !!(mosaicOrder && mosaicOrder.length > 0 && mosaicCols);
 
+  useEffect(() => {
+    if (mosaicOrder) {
+      console.log('[MOSAIC:GRID] mosaicOrder changed, length:', mosaicOrder.length, 'cols:', mosaicCols);
+    } else {
+      console.log('[MOSAIC:GRID] mosaicOrder cleared');
+    }
+  }, [mosaicOrder, mosaicCols]);
+
   const mosaicTokens = useMemo(() => {
     if (!mosaicOrder || mosaicOrder.length === 0) return [];
     const tokenMap = new Map(storeTokens.map((t) => [t.id, t]));
     const result = mosaicOrder.map((id) => tokenMap.get(id)).filter(Boolean) as UnifiedToken[];
+    console.log('[MOSAIC:GRID] mosaicTokens computed:', result.length, '/', mosaicOrder.length, 'matched. isMosaic:', !!(mosaicOrder.length > 0 && mosaicCols));
     if (result.length === 0) {
-      console.warn('[MOSAIC] No tokens matched. Order IDs sample:', mosaicOrder.slice(0, 3), 'Store IDs sample:', storeTokens.slice(0, 3).map(t => t.id));
-    } else {
-      console.log('[MOSAIC] Rendering', result.length, 'cells from', new Set(mosaicOrder).size, 'unique tokens');
+      console.warn('[MOSAIC:GRID] IDs sample — order:', mosaicOrder.slice(0, 3), 'store:', storeTokens.slice(0, 3).map(t => t.id));
     }
     return result;
   }, [mosaicOrder, storeTokens]);
@@ -162,6 +169,8 @@ export default function TokenGrid({ tokens, onSelect }: TokenGridProps) {
     : isMobile
       ? 'repeat(5, 1fr)'
       : 'repeat(auto-fill, minmax(200px, 1fr))';
+
+  console.log('[MOSAIC:GRID] render — isMosaic:', isMosaic, 'mosaicTokens:', mosaicTokens.length, 'displayTokens:', displayTokens.length, 'gridCols:', gridColumns.slice(0, 30));
 
   return (
     <div style={{
